@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import * as path from 'path';
-import { promises as fs } from 'fs';
+import * as zlib from 'zlib';
+import { promises as fs, watch } from 'fs';
 import { exec } from 'child_process';
 import {
   BaselineManager,
@@ -81,14 +82,16 @@ program
   .option('--ci', 'Run in CI mode with exit code enforcement', false)
   .option('--fail-on <severity>', 'Fail CI if severity matches or exceeds (low|medium|high)', 'high')
   .option('--json', 'Output results as JSON', false)
+  .option('-w, --watch', 'Watch workspace tools in real-time and scan continuously', false)
+  .option('--web', 'Open web dashboard with scan results', false)
   .action(async (options) => {
     const cwd = process.cwd();
 
-    try {
+    const doScan = async (): Promise<ScanResult | null> => {
       const baseline = await FileBaselineStorage.loadLocalBaseline(cwd);
       if (!baseline) {
         console.error('No trusted baseline found. Run `toolguard init` first.');
-        process.exit(2);
+        return null;
       }
 
       const tools = await discoverWorkspaceTools(cwd);
@@ -96,8 +99,7 @@ program
 
       if (options.json) {
         console.log(JSON.stringify(scanResult, null, 2));
-        if (scanResult.driftCount > 0) process.exit(1);
-        process.exit(0);
+        return scanResult;
       }
 
       console.log('\nToolGuard Security Scan');
@@ -113,7 +115,7 @@ program
 
       if (scanResult.driftCount === 0) {
         console.log('✓ All monitored tools match the trusted baseline. (SAFE)\n');
-        process.exit(0);
+        return scanResult;
       }
 
       console.log('Trust drift detected.\n');
@@ -131,24 +133,67 @@ program
       const topDrift = scanResult.tools.find(t => t.driftDetected);
       if (topDrift) {
         console.log('Run:');
-        console.log(`  toolguard explain ${topDrift.name}\n`);
+        console.log(`  toolguard explain ${topDrift.name}`);
+        console.log(`  toolguard dashboard  (open visual diff on Web UI)\n`);
+      }
+
+      return scanResult;
+    };
+
+    try {
+      const initialResult = await doScan();
+      if (!initialResult) process.exit(2);
+
+      if (options.web) {
+        await openDashboard(cwd);
+      }
+
+      if (options.watch) {
+        console.log('👀 Watching workspace tools in real-time... (Press Ctrl+C to stop)\n');
+        let scanTimeout: NodeJS.Timeout | null = null;
+        const triggerWatchScan = () => {
+          if (scanTimeout) clearTimeout(scanTimeout);
+          scanTimeout = setTimeout(async () => {
+            console.log('\n[Change Detected] Re-scanning tools...');
+            await doScan();
+          }, 300);
+        };
+
+        const watchTargets = [
+          path.join(cwd, '.toolguard'),
+          path.join(cwd, '.toolguard', 'tools'),
+          path.join(cwd, 'package.json')
+        ];
+
+        for (const target of watchTargets) {
+          try {
+            watch(target, { recursive: true }, triggerWatchScan);
+          } catch {}
+        }
+
+        // Keep process alive for watch mode
+        await new Promise(() => {});
+        return;
       }
 
       // Check CI policy
       if (options.ci) {
         const severityOrder: Record<RiskSeverity, number> = { low: 1, medium: 2, high: 3 };
         const minThreshold = severityOrder[options.failOn.toLowerCase() as RiskSeverity] || 3;
-        const highestDetected = scanResult.highestSeverity !== 'none'
-          ? severityOrder[scanResult.highestSeverity]
+        const highestDetected = initialResult.highestSeverity !== 'none'
+          ? severityOrder[initialResult.highestSeverity]
           : 0;
 
         if (highestDetected >= minThreshold) {
-          console.error(`CI failure: Detected drift severity [${scanResult.highestSeverity}] meets or exceeds --fail-on [${options.failOn}]`);
+          console.error(`CI failure: Detected drift severity [${initialResult.highestSeverity}] meets or exceeds --fail-on [${options.failOn}]`);
           process.exit(1);
         }
       }
 
-      process.exit(1);
+      if (initialResult.driftCount > 0) {
+        process.exit(1);
+      }
+      process.exit(0);
     } catch (err) {
       console.error('Scan execution error:', err);
       process.exit(2);
@@ -286,30 +331,57 @@ program
     console.log(`Baseline hash:   ${baseline.baselineId}`);
     console.log(`Integrity:       ${scanResult.driftCount === 0 ? '✓ IN SYNC (0 drift)' : `⚠ DRIFT DETECTED (${scanResult.driftCount} changed)`}`);
     console.log(`\nTo view on the web dashboard:`);
-    console.log(`  1. Open ${url}`);
-    console.log(`  2. Click "Import Baseline" and select .toolguard/baseline.json\n`);
+    console.log(`  Run: toolguard dashboard (syncs tools & opens visual diff)\n`);
   });
+
+// Helper: Open Web Dashboard with live workspace state
+async function openDashboard(cwd: string) {
+  const baseUrl = process.env.TOOLGUARD_DASHBOARD_URL || 'https://toolguard-app.vercel.app';
+  let targetUrl = `${baseUrl}/dashboard`;
+
+  try {
+    const baseline = await FileBaselineStorage.loadLocalBaseline(cwd);
+    if (baseline) {
+      const tools = await discoverWorkspaceTools(cwd);
+      const payload = {
+        name: baseline.projectId || path.basename(cwd),
+        baseline,
+        tools
+      };
+      const jsonStr = JSON.stringify(payload);
+      const compressed = zlib.gzipSync(Buffer.from(jsonStr, 'utf8'));
+      const encoded = compressed.toString('base64url');
+      const candidateUrl = `${baseUrl}/dashboard#sync=${encoded}`;
+      if (candidateUrl.length < 7500) {
+        targetUrl = candidateUrl;
+        console.log(`🛡 Synced ${tools.length} workspace tool(s) and baseline to browser session.`);
+      }
+    }
+  } catch (e: any) {
+    // Fallback gracefully
+  }
+
+  console.log(`Opening ToolGuard Dashboard in browser...`);
+  const platform = process.platform;
+  const cmd = platform === 'win32'
+    ? `start "" "${targetUrl}"`
+    : platform === 'darwin'
+    ? `open "${targetUrl}"`
+    : `xdg-open "${targetUrl}"`;
+
+  exec(cmd, (err) => {
+    if (err) {
+      console.log(`Please open ${targetUrl} in your browser.`);
+    }
+  });
+}
 
 // 8. COMMAND: dashboard
 program
   .command('dashboard')
-  .description('Open the ToolGuard Web Dashboard in browser')
-  .action(() => {
-    const url = process.env.TOOLGUARD_DASHBOARD_URL || 'https://toolguard-app.vercel.app';
-    console.log(`Opening ToolGuard Dashboard at ${url}...`);
-
-    const platform = process.platform;
-    const cmd = platform === 'win32'
-      ? `start ${url}`
-      : platform === 'darwin'
-      ? `open ${url}`
-      : `xdg-open ${url}`;
-
-    exec(cmd, (err) => {
-      if (err) {
-        console.log(`Please open ${url} in your browser.`);
-      }
-    });
+  .description('Open the ToolGuard Web Dashboard in browser with live workspace sync')
+  .action(async () => {
+    await openDashboard(process.cwd());
   });
 
 // 9. COMMAND: disconnect / reset

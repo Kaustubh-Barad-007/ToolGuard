@@ -43,6 +43,8 @@ export const DashboardPage: React.FC = () => {
     baseline,
     activeWorkspace,
     loadJudgeDemo,
+    simulateDrift,
+    resetToBaseline,
   } = useDemoData();
 
   const [scanning, setScanning] = useState(false);
@@ -163,17 +165,29 @@ export const DashboardPage: React.FC = () => {
             {activeWorkspace.stack} · <strong>{scanStatuses.length} tools</strong> verified against SHA-256 cryptographic baseline
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1.25 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           {!isProtected ? (
-            <Button variant="contained" color="error" size="small" onClick={() => navigate('/drift')}
-              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px', fontSize: '0.82rem', px: 2 }}>
-              Review {openDrift.length} Drift Alert{openDrift.length > 1 ? 's' : ''}
-            </Button>
+            <>
+              <Button variant="contained" color="error" size="small" onClick={() => navigate('/drift')}
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px', fontSize: '0.82rem', px: 2 }}>
+                Review {openDrift.length} Drift Alert{openDrift.length > 1 ? 's' : ''}
+              </Button>
+              <Button variant="outlined" size="small" onClick={resetToBaseline}
+                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: border, color: 'text.secondary' }}>
+                Restore Baseline
+              </Button>
+            </>
           ) : (
-            <Button variant="outlined" size="small" startIcon={<PlayArrowIcon sx={{ fontSize: '15px !important' }} />} onClick={handleScan} disabled={scanning}
-              sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: border, color: 'text.primary', '&:hover': { borderColor: 'text.primary' } }}>
-              {scanning ? 'Verifying…' : 'Run Verification Scan'}
-            </Button>
+            <>
+              <Button variant="outlined" size="small" startIcon={<PlayArrowIcon sx={{ fontSize: '15px !important' }} />} onClick={handleScan} disabled={scanning}
+                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: border, color: 'text.primary', '&:hover': { borderColor: 'text.primary' } }}>
+                {scanning ? 'Verifying…' : 'Run Verification Scan'}
+              </Button>
+              <Button variant="outlined" size="small" startIcon={<BoltIcon sx={{ fontSize: '14px !important', color: '#f59e0b' }} />} onClick={simulateDrift}
+                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: 'rgba(245,158,11,0.4)', color: '#f59e0b', '&:hover': { borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.06)' } }}>
+                Simulate Threat
+              </Button>
+            </>
           )}
         </Box>
       </Box>
