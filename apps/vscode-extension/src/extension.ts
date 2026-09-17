@@ -8,6 +8,7 @@ let statusBarItem: vscode.StatusBarItem;
 let scanService: ExtensionScanService;
 let latestScanResult: ScanResult | null = null;
 let notifiedDrifts = new Set<string>();
+let isScanning = false;
 
 export async function activate(context: vscode.ExtensionContext) {
   scanService = new ExtensionScanService();
@@ -16,7 +17,7 @@ export async function activate(context: vscode.ExtensionContext) {
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   statusBarItem.command = 'toolguard.showStatus';
   context.subscriptions.push(statusBarItem);
-  updateStatusBar('checking');
+  updateStatusBar('checking', 0);
 
   // Register Commands
   context.subscriptions.push(
@@ -47,46 +48,77 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand('toolguard.refreshTools', async () => {
-      await performScan(false);
-      vscode.window.showInformationMessage('ToolGuard: Refreshed tool list.');
+      await performScan(true);
+      vscode.window.showInformationMessage('ToolGuard: Verified workspace tools.');
     })
   );
 
-  // Initial Scan & First-Run check
+  // Initial Scan
   await checkFirstRunOrScan();
 
-  // Watch for changes in workspace tool manifests
-  const watcher = vscode.workspace.createFileSystemWatcher('**/{.toolguard,tools,.cursor}/**/*.{json,yaml}');
-  watcher.onDidChange(async () => {
-    const config = vscode.workspace.getConfiguration('toolguard');
-    if (config.get<boolean>('scanOnSave', true)) {
-      await performScan(false);
-    }
+  // Real-time File System Watchers (create, change, delete)
+  const toolWatcher = vscode.workspace.createFileSystemWatcher('**/{.toolguard,tools,.cursor,.vscode}/**/*.{json,yaml,yml}');
+  const pkgWatcher = vscode.workspace.createFileSystemWatcher('**/package.json');
+
+  const onWorkspaceChanged = async () => {
+    await performScan(false);
+  };
+
+  toolWatcher.onDidChange(onWorkspaceChanged);
+  toolWatcher.onDidCreate(onWorkspaceChanged);
+  toolWatcher.onDidDelete(onWorkspaceChanged);
+
+  pkgWatcher.onDidChange(onWorkspaceChanged);
+  pkgWatcher.onDidCreate(onWorkspaceChanged);
+  pkgWatcher.onDidDelete(onWorkspaceChanged);
+
+  context.subscriptions.push(toolWatcher, pkgWatcher);
+
+  // Also hook document save
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(async (doc) => {
+      const fn = doc.fileName.toLowerCase();
+      if (fn.includes('.toolguard') || fn.includes('package.json') || fn.includes('tasks.json') || fn.includes('mcp.json')) {
+        await performScan(false);
+      }
+    })
+  );
+
+  // 2.5-second Real-time Polling Heartbeat
+  const pollTimer = setInterval(async () => {
+    await performScan(false);
+  }, 2500);
+
+  context.subscriptions.push({
+    dispose: () => clearInterval(pollTimer)
   });
-  context.subscriptions.push(watcher);
 }
 
-function updateStatusBar(state: 'safe' | 'drift' | 'unprotected' | 'checking') {
+function updateStatusBar(state: 'safe' | 'drift' | 'unprotected' | 'checking', driftCount = 0) {
   statusBarItem.show();
   switch (state) {
     case 'safe':
       statusBarItem.text = '$(shield) ToolGuard $(check)';
-      statusBarItem.tooltip = 'ToolGuard: All monitored tools match trusted baseline';
+      statusBarItem.tooltip = 'ToolGuard: All monitored tools match trusted baseline (Zero-Trust Verified)';
       statusBarItem.backgroundColor = undefined;
+      statusBarItem.color = '#10b981';
       break;
     case 'drift':
-      statusBarItem.text = '$(warning) ToolGuard $(alert)';
-      statusBarItem.tooltip = 'ToolGuard: Trust drift detected in workspace tools!';
-      statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+      statusBarItem.text = `$(alert) ToolGuard: ⚠ DRIFT (${driftCount})`;
+      statusBarItem.tooltip = `ToolGuard Alert: ${driftCount} tool capability drift(s) detected! Click to inspect.`;
+      statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+      statusBarItem.color = '#ffffff';
       break;
     case 'unprotected':
       statusBarItem.text = '$(shield) ToolGuard $(circle-slash)';
-      statusBarItem.tooltip = 'ToolGuard: No trusted baseline established';
+      statusBarItem.tooltip = 'ToolGuard: No trusted baseline established. Run toolguard init to freeze baseline.';
       statusBarItem.backgroundColor = undefined;
+      statusBarItem.color = '#f59e0b';
       break;
     case 'checking':
       statusBarItem.text = '$(sync~spin) ToolGuard';
-      statusBarItem.tooltip = 'ToolGuard: Checking tool configurations...';
+      statusBarItem.tooltip = 'ToolGuard: Verifying tool configurations...';
+      statusBarItem.color = undefined;
       break;
   }
 }
@@ -108,16 +140,16 @@ async function checkFirstRunOrScan() {
   const tools = await scanService.discoverTools(workspacePath);
 
   if (!baseline) {
-    updateStatusBar('unprotected');
+    updateStatusBar('unprotected', 0);
     if (tools.length > 0) {
-      const selection = await vscode.window.showInformationMessage(
-        `ToolGuard discovered ${tools.length} tool(s) in this workspace. Create a trusted baseline to monitor for trust drift?`,
-        'Create Baseline',
-        'Dismiss'
-      );
-      if (selection === 'Create Baseline') {
-        await createBaselineCommand();
-      }
+      vscode.window.showInformationMessage(
+        `ToolGuard discovered ${tools.length} tool(s) in this workspace. Establish trusted baseline?`,
+        'Create Baseline'
+      ).then(choice => {
+        if (choice === 'Create Baseline') {
+          createBaselineCommand();
+        }
+      });
     }
   } else {
     await performScan(false);
@@ -125,57 +157,66 @@ async function checkFirstRunOrScan() {
 }
 
 async function performScan(userInitiated: boolean) {
-  const workspacePath = await getWorkspacePath();
-  if (!workspacePath) return;
+  if (isScanning) return;
+  isScanning = true;
 
-  updateStatusBar('checking');
-  const baseline = await scanService.loadBaseline(workspacePath);
+  try {
+    const workspacePath = await getWorkspacePath();
+    if (!workspacePath) return;
 
-  if (!baseline) {
-    updateStatusBar('unprotected');
-    if (userInitiated) {
-      const choice = await vscode.window.showWarningMessage(
-        'No baseline found. Create one now?',
-        'Create Baseline',
-        'Cancel'
-      );
-      if (choice === 'Create Baseline') {
-        await createBaselineCommand();
+    const baseline = await scanService.loadBaseline(workspacePath);
+    if (!baseline) {
+      updateStatusBar('unprotected', 0);
+      if (userInitiated) {
+        const choice = await vscode.window.showWarningMessage(
+          'No baseline found. Establish baseline now?',
+          'Create Baseline',
+          'Cancel'
+        );
+        if (choice === 'Create Baseline') {
+          await createBaselineCommand();
+        }
+      }
+      return;
+    }
+
+    const tools = await scanService.discoverTools(workspacePath);
+    const result = scanService.runScan(tools, baseline);
+    latestScanResult = result;
+
+    if (result.driftCount === 0) {
+      updateStatusBar('safe', 0);
+      notifiedDrifts.clear();
+      if (userInitiated) {
+        vscode.window.showInformationMessage(`ToolGuard: All ${result.totalTools} tools match trusted baseline.`);
+      }
+    } else {
+      updateStatusBar('drift', result.driftCount);
+
+      // Notify developer about newly detected drifts
+      const driftTools = result.tools.filter(t => t.driftDetected);
+      for (const tool of driftTools) {
+        const driftKey = `${tool.name}-${tool.fingerprint}`;
+        if (!notifiedDrifts.has(driftKey)) {
+          notifiedDrifts.add(driftKey);
+          const topChange = tool.changes[0];
+          const reason = topChange?.reason || 'unauthorized capability expansion';
+          const msg = `ToolGuard Alert: Trust drift detected in "${tool.name}" (${reason})!`;
+
+          vscode.window.showErrorMessage(msg, 'Review Drift', 'Open Dashboard').then(action => {
+            if (action === 'Review Drift') {
+              vscode.commands.executeCommand('toolguard.explainDrift');
+            } else if (action === 'Open Dashboard') {
+              vscode.commands.executeCommand('toolguard.openDashboard');
+            }
+          });
+        }
       }
     }
-    return;
-  }
-
-  const tools = await scanService.discoverTools(workspacePath);
-  const result = scanService.runScan(tools, baseline);
-  latestScanResult = result;
-
-  if (result.driftCount === 0) {
-    updateStatusBar('safe');
-    notifiedDrifts.clear();
-    if (userInitiated) {
-      vscode.window.showInformationMessage(`ToolGuard: All ${result.totalTools} tools match trusted baseline.`);
-    }
-  } else {
-    updateStatusBar('drift');
-
-    // Notify user about newly detected drifts (avoiding spam)
-    const driftTools = result.tools.filter(t => t.driftDetected);
-    for (const tool of driftTools) {
-      const driftKey = `${tool.name}-${tool.fingerprint}`;
-      if (!notifiedDrifts.has(driftKey)) {
-        notifiedDrifts.add(driftKey);
-        const topChange = tool.changes[0];
-        const msg = `ToolGuard detected trust drift: "${tool.name}" changed (${topChange?.reason || 'capability modified'}).`;
-        vscode.window.showWarningMessage(msg, 'Review Drift', 'Open Dashboard').then(action => {
-          if (action === 'Review Drift') {
-            vscode.commands.executeCommand('toolguard.explainDrift');
-          } else if (action === 'Open Dashboard') {
-            vscode.commands.executeCommand('toolguard.openDashboard');
-          }
-        });
-      }
-    }
+  } catch (err) {
+    console.error('[ToolGuard Extension] Scan error:', err);
+  } finally {
+    isScanning = false;
   }
 }
 
@@ -186,7 +227,7 @@ async function createBaselineCommand() {
   let tools = await scanService.discoverTools(workspacePath);
   if (tools.length === 0) {
     const choice = await vscode.window.showInformationMessage(
-      'No tool definitions found in this workspace. Scaffold a starter .toolguard/tools/ definition now?',
+      'No tool definitions found in this workspace. Scaffold starter .toolguard/tools/ definition?',
       'Scaffold & Create Baseline',
       'Cancel'
     );
@@ -217,6 +258,7 @@ async function createBaselineCommand() {
   }
 
   await scanService.createBaseline(workspacePath, tools);
+  notifiedDrifts.clear();
   vscode.window.showInformationMessage(`ToolGuard: Baseline established for ${tools.length} tool(s).`);
   await performScan(false);
 }
@@ -260,7 +302,7 @@ async function showStatusMenu() {
 
 async function showDriftQuickPick() {
   if (!latestScanResult || latestScanResult.driftCount === 0) {
-    vscode.window.showInformationMessage('No trust drift detected in workspace tools.');
+    vscode.window.showInformationMessage('ToolGuard: All monitored tools match trusted baseline.');
     return;
   }
 
@@ -273,7 +315,7 @@ async function showDriftQuickPick() {
   }));
 
   const selected = await vscode.window.showQuickPick(items, {
-    placeHolder: 'Select a tool to inspect drift'
+    placeHolder: 'Select a tool to inspect drift details'
   });
 
   if (selected) {

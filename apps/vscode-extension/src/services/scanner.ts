@@ -33,7 +33,15 @@ export class ExtensionScanService {
     return BaselineManager.compare(tools, baseline);
   }
 
+  runScan(tools: ToolDefinition[], baseline: Baseline): ScanResult {
+    return this.compareWithBaseline(tools, baseline);
+  }
+
   explainDrift(tool: ToolScanStatus): string {
     return formatDriftExplanation(tool.name, tool.changes);
+  }
+
+  explainToolDrift(tool: ToolScanStatus): string {
+    return this.explainDrift(tool);
   }
 }
