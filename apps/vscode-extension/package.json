@@ -14,9 +14,7 @@
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
-    "workspaceContains:.toolguard/baseline.json",
-    "workspaceContains:.cursor/mcp.json",
-    "workspaceContains:toolguard-tools.json",
+    "*",
     "onStartupFinished"
   ],
   "scripts": {

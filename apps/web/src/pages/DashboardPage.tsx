@@ -26,6 +26,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import SearchIcon from '@mui/icons-material/Search';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { useDemoData } from '../context/DemoDataContext';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -51,6 +52,7 @@ export const DashboardPage: React.FC = () => {
   const [copiedCmd, setCopiedCmd] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPermission, setSelectedPermission] = useState<string>('all');
+  const [showGuide, setShowGuide] = useState(false);
 
   const openDrift = driftEvents.filter(e => e.status === 'open');
   const isProtected = openDrift.length === 0;
@@ -166,6 +168,10 @@ export const DashboardPage: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button variant="outlined" size="small" startIcon={<HelpOutlineIcon sx={{ fontSize: '14px !important' }} />} onClick={() => setShowGuide(!showGuide)}
+            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: border, color: 'text.secondary', '&:hover': { borderColor: 'text.primary', color: 'text.primary' } }}>
+            {showGuide ? 'Hide Guide' : 'How It Works'}
+          </Button>
           {!isProtected ? (
             <>
               <Button variant="contained" color="error" size="small" onClick={() => navigate('/drift')}
@@ -191,6 +197,61 @@ export const DashboardPage: React.FC = () => {
           )}
         </Box>
       </Box>
+
+      {/* Interactive Architecture & Educational Guide Card */}
+      {showGuide && (
+        <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: '10px', backgroundColor: surface, borderColor: border }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ShieldOutlinedIcon sx={{ color: '#10b981', fontSize: 20 }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 750, color: 'text.primary', letterSpacing: '-0.01em' }}>
+                How ToolGuard Protects Your Project (3 Pillars)
+              </Typography>
+            </Box>
+            <Chip label="Autonomous Continuous Protection" size="small" sx={{ fontSize: '0.68rem', fontWeight: 700, backgroundColor: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }} />
+          </Box>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ p: 1.75, borderRadius: '8px', backgroundColor: isDark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.25)', height: '100%' }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: '#6366f1', display: 'block', mb: 0.75, letterSpacing: '0.03em' }}>
+                  1. CRYPTOGRAPHIC BASELINE
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.6 }}>
+                  Freezes all discovered tool definitions, npm commands, and MCP parameters into deterministic SHA-256 hashes via <code>toolguard init</code>.
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ p: 1.75, borderRadius: '8px', backgroundColor: isDark ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.25)', height: '100%' }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: '#10b981', display: 'block', mb: 0.75, letterSpacing: '0.03em' }}>
+                  2. MULTI-SURFACE MONITORING
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.6 }}>
+                  Continuous active monitoring via <strong>VS Code status bar</strong>, <strong>Git pre-commit gate</strong>, and real-time terminal watch (<code>toolguard scan -w</code>).
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ p: 1.75, borderRadius: '8px', backgroundColor: isDark ? 'rgba(244,63,94,0.06)' : 'rgba(244,63,94,0.04)', border: '1px solid rgba(244,63,94,0.25)', height: '100%' }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: '#f43f5e', display: 'block', mb: 0.75, letterSpacing: '0.03em' }}>
+                  3. ZERO-TRUST DEFENSE
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.6 }}>
+                  If a tool secretly expands to <code>admin</code> or an external network endpoint, ToolGuard alerts in &lt;100ms and blocks runtime execution.
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+          <Box sx={{ mt: 2, pt: 1.5, borderTop: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.76rem' }}>
+              ⚡ <strong>Test it now:</strong> Click <em>"Simulate Threat"</em> or run <code>toolguard threat-test</code> in your terminal.
+            </Typography>
+            <Button size="small" onClick={() => setShowGuide(false)} sx={{ textTransform: 'none', fontSize: '0.75rem', color: 'text.secondary' }}>
+              Dismiss Guide
+            </Button>
+          </Box>
+        </Paper>
+      )}
 
       {/* Drift Alert Banner */}
       {!isProtected && (

@@ -13,10 +13,12 @@ let isScanning = false;
 export async function activate(context: vscode.ExtensionContext) {
   scanService = new ExtensionScanService();
 
-  // Create Status Bar Item
-  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  // Create high-priority Status Bar Item anchored firmly to the bottom-left corner
+  statusBarItem = vscode.window.createStatusBarItem('toolguard.status', vscode.StatusBarAlignment.Left, 10000);
+  statusBarItem.name = 'ToolGuard Security Monitor';
   statusBarItem.command = 'toolguard.showStatus';
   context.subscriptions.push(statusBarItem);
+  statusBarItem.show();
   updateStatusBar('checking', 0);
 
   // Register Commands
@@ -84,6 +86,13 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  // Dynamic workspace folder listener
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+      await checkFirstRunOrScan();
+    })
+  );
+
   // 2.5-second Real-time Polling Heartbeat
   const pollTimer = setInterval(async () => {
     await performScan(false);
@@ -94,7 +103,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 }
 
-function updateStatusBar(state: 'safe' | 'drift' | 'unprotected' | 'checking', driftCount = 0) {
+function updateStatusBar(state: 'safe' | 'drift' | 'unprotected' | 'checking' | 'ready', driftCount = 0) {
   statusBarItem.show();
   switch (state) {
     case 'safe':
@@ -120,6 +129,12 @@ function updateStatusBar(state: 'safe' | 'drift' | 'unprotected' | 'checking', d
       statusBarItem.tooltip = 'ToolGuard: Verifying tool configurations...';
       statusBarItem.color = undefined;
       break;
+    case 'ready':
+      statusBarItem.text = '$(shield) ToolGuard';
+      statusBarItem.tooltip = 'ToolGuard: Active & Ready (Open a workspace to monitor tools)';
+      statusBarItem.backgroundColor = undefined;
+      statusBarItem.color = '#10b981';
+      break;
   }
 }
 
@@ -132,7 +147,7 @@ async function getWorkspacePath(): Promise<string | null> {
 async function checkFirstRunOrScan() {
   const workspacePath = await getWorkspacePath();
   if (!workspacePath) {
-    statusBarItem.hide();
+    updateStatusBar('ready', 0);
     return;
   }
 
