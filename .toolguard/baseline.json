@@ -1,8 +1,8 @@
 {
-  "baselineId": "bl-1789624937780-9vpukm",
+  "baselineId": "bl-1789636317978-irgfoo",
   "projectId": "ToolGuard",
   "version": 1,
-  "createdAt": "2026-09-17T06:02:17.782Z",
+  "createdAt": "2026-09-17T09:11:57.984Z",
   "createdBy": "developer",
   "algorithm": "SHA-256",
   "tools": {
@@ -29,7 +29,7 @@
         "extra": {}
       },
       "fingerprint": "f49428a776611803fd50e93590f61a30ac9691a1b59effbb02c0579288857f8e",
-      "createdAt": "2026-09-17T06:02:17.781Z"
+      "createdAt": "2026-09-17T09:11:57.981Z"
     },
     "github": {
       "toolId": "github",
@@ -58,7 +58,7 @@
         "extra": {}
       },
       "fingerprint": "9b36a38a80ca44afe83092ba8599c037055e9447f0c9bcbf159553174291ec65",
-      "createdAt": "2026-09-17T06:02:17.782Z"
+      "createdAt": "2026-09-17T09:11:57.983Z"
     },
     "project-files": {
       "toolId": "project-files",
@@ -83,7 +83,7 @@
         "extra": {}
       },
       "fingerprint": "3e47a93dc3f696aa920cc1df7506e905ea4cf3fa90e8bd364abb57a3bcdd8eb9",
-      "createdAt": "2026-09-17T06:02:17.782Z"
+      "createdAt": "2026-09-17T09:11:57.983Z"
     },
     "terminal": {
       "toolId": "terminal",
@@ -108,8 +108,341 @@
         "extra": {}
       },
       "fingerprint": "c3f9d06b793fddf4c822653e290eaabe8b9da4750977b2efc650b83ee70abe2e",
-      "createdAt": "2026-09-17T06:02:17.782Z"
+      "createdAt": "2026-09-17T09:11:57.983Z"
+    },
+    "npm-build": {
+      "toolId": "npm-build",
+      "name": "npm:build",
+      "normalizedDefinition": {
+        "name": "npm:build",
+        "description": "Package script \"build\": pnpm --filter \"./packages/*\" --filter \"./apps/*\" run build",
+        "version": "1.0.0",
+        "permissions": [
+          "execute",
+          "read",
+          "write"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": true,
+          "command": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" run build",
+          "isolated": false
+        },
+        "metadata": {
+          "rawCommand": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" run build",
+          "scriptName": "build",
+          "sourceFile": "package.json"
+        },
+        "extra": {}
+      },
+      "fingerprint": "e484f31d856fbf8e033e2688c38070787a224fa4a1e5ebad050b68de2ab7c8bb",
+      "metadata": {
+        "sourceFile": "package.json",
+        "scriptName": "build",
+        "rawCommand": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" run build"
+      },
+      "createdAt": "2026-09-17T09:11:57.983Z"
+    },
+    "npm-test": {
+      "toolId": "npm-test",
+      "name": "npm:test",
+      "normalizedDefinition": {
+        "name": "npm:test",
+        "description": "Package script \"test\": vitest run",
+        "version": "1.0.0",
+        "permissions": [
+          "execute",
+          "read"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": true,
+          "command": "vitest run",
+          "isolated": false
+        },
+        "metadata": {
+          "rawCommand": "vitest run",
+          "scriptName": "test",
+          "sourceFile": "package.json"
+        },
+        "extra": {}
+      },
+      "fingerprint": "e4d67b0cb69c586e883b303e829ec12d6c545223ffc4920955b50e6ae0dcbd42",
+      "metadata": {
+        "sourceFile": "package.json",
+        "scriptName": "test",
+        "rawCommand": "vitest run"
+      },
+      "createdAt": "2026-09-17T09:11:57.983Z"
+    },
+    "npm-test:watch": {
+      "toolId": "npm-test:watch",
+      "name": "npm:test:watch",
+      "normalizedDefinition": {
+        "name": "npm:test:watch",
+        "description": "Package script \"test:watch\": vitest",
+        "version": "1.0.0",
+        "permissions": [
+          "execute",
+          "read"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": true,
+          "command": "vitest",
+          "isolated": false
+        },
+        "metadata": {
+          "rawCommand": "vitest",
+          "scriptName": "test:watch",
+          "sourceFile": "package.json"
+        },
+        "extra": {}
+      },
+      "fingerprint": "8efa06f4266bc4883edf7509b0da4a55d386332f4454d4ab4c27b15059ebda3e",
+      "metadata": {
+        "sourceFile": "package.json",
+        "scriptName": "test:watch",
+        "rawCommand": "vitest"
+      },
+      "createdAt": "2026-09-17T09:11:57.983Z"
+    },
+    "npm-lint": {
+      "toolId": "npm-lint",
+      "name": "npm:lint",
+      "normalizedDefinition": {
+        "name": "npm:lint",
+        "description": "Package script \"lint\": pnpm -r --parallel run lint",
+        "version": "1.0.0",
+        "permissions": [
+          "execute",
+          "read"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": true,
+          "command": "pnpm -r --parallel run lint",
+          "isolated": false
+        },
+        "metadata": {
+          "rawCommand": "pnpm -r --parallel run lint",
+          "scriptName": "lint",
+          "sourceFile": "package.json"
+        },
+        "extra": {}
+      },
+      "fingerprint": "f6afa68eae23176dd1d9e7358af3fb5b155015a74d2eb5857b2708ae2518d5c3",
+      "metadata": {
+        "sourceFile": "package.json",
+        "scriptName": "lint",
+        "rawCommand": "pnpm -r --parallel run lint"
+      },
+      "createdAt": "2026-09-17T09:11:57.984Z"
+    },
+    "npm-typecheck": {
+      "toolId": "npm-typecheck",
+      "name": "npm:typecheck",
+      "normalizedDefinition": {
+        "name": "npm:typecheck",
+        "description": "Package script \"typecheck\": pnpm -r --parallel run typecheck",
+        "version": "1.0.0",
+        "permissions": [
+          "execute",
+          "read"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": true,
+          "command": "pnpm -r --parallel run typecheck",
+          "isolated": false
+        },
+        "metadata": {
+          "rawCommand": "pnpm -r --parallel run typecheck",
+          "scriptName": "typecheck",
+          "sourceFile": "package.json"
+        },
+        "extra": {}
+      },
+      "fingerprint": "cdab5d8e8e9c16741003900ee72bc51055174c73ff5ad9c3839d3264ad7bf50c",
+      "metadata": {
+        "sourceFile": "package.json",
+        "scriptName": "typecheck",
+        "rawCommand": "pnpm -r --parallel run typecheck"
+      },
+      "createdAt": "2026-09-17T09:11:57.984Z"
+    },
+    "npm-cli": {
+      "toolId": "npm-cli",
+      "name": "npm:cli",
+      "normalizedDefinition": {
+        "name": "npm:cli",
+        "description": "Package script \"cli\": pnpm --filter @toolguard/cli dev",
+        "version": "1.0.0",
+        "permissions": [
+          "execute",
+          "read"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": true,
+          "command": "pnpm --filter @toolguard/cli dev",
+          "isolated": false
+        },
+        "metadata": {
+          "rawCommand": "pnpm --filter @toolguard/cli dev",
+          "scriptName": "cli",
+          "sourceFile": "package.json"
+        },
+        "extra": {}
+      },
+      "fingerprint": "279a3cbf592656dbd68a6c5aec5e431b1a31955d0b6758010cbc1a36a5159431",
+      "metadata": {
+        "sourceFile": "package.json",
+        "scriptName": "cli",
+        "rawCommand": "pnpm --filter @toolguard/cli dev"
+      },
+      "createdAt": "2026-09-17T09:11:57.984Z"
+    },
+    "npm-web:dev": {
+      "toolId": "npm-web:dev",
+      "name": "npm:web:dev",
+      "normalizedDefinition": {
+        "name": "npm:web:dev",
+        "description": "Package script \"web:dev\": pnpm --filter @toolguard/web dev",
+        "version": "1.0.0",
+        "permissions": [
+          "execute",
+          "read"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": true,
+          "command": "pnpm --filter @toolguard/web dev",
+          "isolated": false
+        },
+        "metadata": {
+          "rawCommand": "pnpm --filter @toolguard/web dev",
+          "scriptName": "web:dev",
+          "sourceFile": "package.json"
+        },
+        "extra": {}
+      },
+      "fingerprint": "b873b5ee79bbeefb1b078ebea10e4bb415032f52af9db2c4c20af649fae2aa80",
+      "metadata": {
+        "sourceFile": "package.json",
+        "scriptName": "web:dev",
+        "rawCommand": "pnpm --filter @toolguard/web dev"
+      },
+      "createdAt": "2026-09-17T09:11:57.984Z"
+    },
+    "npm-web:build": {
+      "toolId": "npm-web:build",
+      "name": "npm:web:build",
+      "normalizedDefinition": {
+        "name": "npm:web:build",
+        "description": "Package script \"web:build\": pnpm --filter @toolguard/web build",
+        "version": "1.0.0",
+        "permissions": [
+          "execute",
+          "read",
+          "write"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": true,
+          "command": "pnpm --filter @toolguard/web build",
+          "isolated": false
+        },
+        "metadata": {
+          "rawCommand": "pnpm --filter @toolguard/web build",
+          "scriptName": "web:build",
+          "sourceFile": "package.json"
+        },
+        "extra": {}
+      },
+      "fingerprint": "a62dcef6c7cc40c2e411fbc5d7114dcf392bd1d8df047d80bd0b343f3e75bcb3",
+      "metadata": {
+        "sourceFile": "package.json",
+        "scriptName": "web:build",
+        "rawCommand": "pnpm --filter @toolguard/web build"
+      },
+      "createdAt": "2026-09-17T09:11:57.984Z"
+    },
+    "ci-ci-yml": {
+      "toolId": "ci-ci-yml",
+      "name": "ci:ToolGuard CI",
+      "normalizedDefinition": {
+        "name": "ci:ToolGuard CI",
+        "description": "GitHub Actions workflow file: ci.yml",
+        "version": "1.0.0",
+        "permissions": [
+          "execute",
+          "read"
+        ],
+        "endpoint": "github-actions",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": true,
+          "command": "gh workflow run ci.yml",
+          "isolated": true
+        },
+        "metadata": {
+          "sourceFile": ".github/workflows/ci.yml",
+          "workflowName": "ToolGuard CI"
+        },
+        "extra": {}
+      },
+      "fingerprint": "3177c4b521e663900bf85634bb0d29ab01a075f30f3b7af8aa7a5bfbb0f1984c",
+      "metadata": {
+        "sourceFile": ".github/workflows/ci.yml",
+        "workflowName": "ToolGuard CI"
+      },
+      "createdAt": "2026-09-17T09:11:57.984Z"
     }
   },
-  "toolCount": 4
+  "toolCount": 13
 }
