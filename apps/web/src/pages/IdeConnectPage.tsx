@@ -55,9 +55,9 @@ export const IdeConnectPage: React.FC = () => {
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
 
-  const border  = isDark ? '#30363d' : '#d0d7de';
-  const surface = isDark ? '#161b22' : '#ffffff';
-  const codeBg  = isDark ? '#0d1117' : '#f6f8fa';
+  const border  = isDark ? '#1f2937' : '#e2e8f0';
+  const surface = isDark ? '#111827' : '#ffffff';
+  const codeBg  = isDark ? '#0b0f19' : '#f8fafc';
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);

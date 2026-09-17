@@ -28,8 +28,8 @@ export const SettingsPage: React.FC = () => {
 
   const handleSave = () => { setSaved(true); setTimeout(() => setSaved(false), 2500); };
 
-  const border  = isDark ? '#30363d' : '#d0d7de';
-  const surface = isDark ? '#161b22' : '#ffffff';
+  const border  = isDark ? '#1f2937' : '#e2e8f0';
+  const surface = isDark ? '#111827' : '#ffffff';
 
   return (
     <Box sx={{ maxWidth: 680 }}>

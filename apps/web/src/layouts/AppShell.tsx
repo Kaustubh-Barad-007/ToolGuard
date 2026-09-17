@@ -128,11 +128,11 @@ export const AppShell: React.FC = () => {
     }
   };
 
-  // GitHub-style colors
-  const bg       = isDark ? '#0d1117' : '#f6f8fa';
-  const surface  = isDark ? '#161b22' : '#ffffff';
-  const border   = isDark ? '#30363d' : '#d0d7de';
-  const navHover = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  // Trustworthy slate colors
+  const bg       = isDark ? '#0b0f19' : '#f8fafc';
+  const surface  = isDark ? '#111827' : '#ffffff';
+  const border   = isDark ? '#1f2937' : '#e2e8f0';
+  const navHover = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
   const navActive= isDark ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.09)';
 
   const drawerContent = (
