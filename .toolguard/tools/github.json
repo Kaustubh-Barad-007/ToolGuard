@@ -1,0 +1,15 @@
+{
+  "name": "github",
+  "description": "GitHub repository integration",
+  "permissions": [
+    "read"
+  ],
+  "endpoint": "https://api.github.com",
+  "authentication": {
+    "required": true,
+    "type": "bearer",
+    "scopes": [
+      "repo:read"
+    ]
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "baselineId": "bl-1789624937780-9vpukm",
+  "projectId": "ToolGuard",
+  "version": 1,
+  "createdAt": "2026-09-17T06:02:17.782Z",
+  "createdBy": "developer",
+  "algorithm": "SHA-256",
+  "tools": {
+    "filesystem": {
+      "toolId": "filesystem",
+      "name": "filesystem",
+      "normalizedDefinition": {
+        "name": "filesystem",
+        "description": "Local workspace filesystem reader",
+        "version": "1.0.0",
+        "permissions": [
+          "read"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": false
+        },
+        "metadata": {},
+        "extra": {}
+      },
+      "fingerprint": "f49428a776611803fd50e93590f61a30ac9691a1b59effbb02c0579288857f8e",
+      "createdAt": "2026-09-17T06:02:17.781Z"
+    },
+    "github": {
+      "toolId": "github",
+      "name": "github",
+      "normalizedDefinition": {
+        "name": "github",
+        "description": "GitHub repository integration",
+        "version": "1.0.0",
+        "permissions": [
+          "read"
+        ],
+        "endpoint": "https://api.github.com",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": true,
+          "type": "bearer",
+          "scopes": [
+            "repo:read"
+          ]
+        },
+        "execution": {
+          "enabled": false
+        },
+        "metadata": {},
+        "extra": {}
+      },
+      "fingerprint": "9b36a38a80ca44afe83092ba8599c037055e9447f0c9bcbf159553174291ec65",
+      "createdAt": "2026-09-17T06:02:17.782Z"
+    },
+    "project-files": {
+      "toolId": "project-files",
+      "name": "project-files",
+      "normalizedDefinition": {
+        "name": "project-files",
+        "description": "Read project files",
+        "version": "1.0.0",
+        "permissions": [
+          "read"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": false
+        },
+        "metadata": {},
+        "extra": {}
+      },
+      "fingerprint": "3e47a93dc3f696aa920cc1df7506e905ea4cf3fa90e8bd364abb57a3bcdd8eb9",
+      "createdAt": "2026-09-17T06:02:17.782Z"
+    },
+    "terminal": {
+      "toolId": "terminal",
+      "name": "terminal",
+      "normalizedDefinition": {
+        "name": "terminal",
+        "description": "Safe project test runner",
+        "version": "1.0.0",
+        "permissions": [
+          "read"
+        ],
+        "endpoint": "stdio",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": false
+        },
+        "metadata": {},
+        "extra": {}
+      },
+      "fingerprint": "c3f9d06b793fddf4c822653e290eaabe8b9da4750977b2efc650b83ee70abe2e",
+      "createdAt": "2026-09-17T06:02:17.782Z"
+    }
+  },
+  "toolCount": 4
+}

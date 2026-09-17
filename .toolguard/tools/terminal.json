@@ -1,0 +1,11 @@
+{
+  "name": "terminal",
+  "description": "Safe project test runner",
+  "permissions": [
+    "read"
+  ],
+  "endpoint": "stdio",
+  "execution": {
+    "enabled": false
+  }
+}

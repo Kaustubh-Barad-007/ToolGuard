@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "projectId": "toolguard-workspace",
+  "scanOnSave": true,
+  "failOnSeverity": "high",
+  "adapters": [
+    "generic-json",
+    "mcp"
+  ],
+  "rules": {
+    "CAPABILITY_WRITE_ADDED": "high",
+    "CAPABILITY_EXECUTION_ADDED": "high",
+    "CAPABILITY_ADMIN_ADDED": "high",
+    "ENDPOINT_EXPANDED": "high",
+    "AUTH_REQUIREMENT_REMOVED": "high"
+  }
+}

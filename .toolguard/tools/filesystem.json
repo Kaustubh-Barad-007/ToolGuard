@@ -1,0 +1,8 @@
+{
+  "name": "filesystem",
+  "description": "Local workspace filesystem reader",
+  "permissions": [
+    "read"
+  ],
+  "endpoint": "local"
+}
