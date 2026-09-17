@@ -11,14 +11,12 @@ import {
   Button,
   Alert,
   Divider,
-  Chip,
   useTheme
 } from '@mui/material';
-import BoltIcon from '@mui/icons-material/Bolt';
-import PolicyOutlinedIcon from '@mui/icons-material/PolicyOutlined';
-import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined';
-import SecurityIcon from '@mui/icons-material/Security';
 import CheckIcon from '@mui/icons-material/Check';
+import PolicyOutlinedIcon from '@mui/icons-material/PolicyOutlined';
+import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
+import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
 import { useDemoData } from '../context/DemoDataContext';
 
 export const SettingsPage: React.FC = () => {
@@ -36,38 +34,21 @@ export const SettingsPage: React.FC = () => {
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const border        = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(210, 218, 235, 0.85)';
-  const surface       = isDark ? '#0D1220' : '#ffffff';
-  const surfaceMuted  = isDark ? '#080B14' : '#F7F8FC';
-  const accentPrimary = isDark ? '#00D4AA' : '#008B72';
-  const accentViolet  = isDark ? '#7C5CFC' : '#5B3FD4';
-  const warningColor  = isDark ? '#FFB340' : '#CC8A1E';
-  const textMuted     = isDark ? '#6B7A99' : '#5A6578';
+  const border       = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+  const surface      = isDark ? '#0d1117' : '#ffffff';
+  const surfaceMuted = isDark ? '#080c10' : '#f6f8fa';
+  const accent       = isDark ? '#00d4aa' : '#008b72';
+  const textMuted    = isDark ? '#8b949e' : '#57606a';
 
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto' }}>
-      {/* ── HEADER ───────────────────────────────────────────────────────────── */}
-      <Box sx={{ mb: 3.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.75 }}>
-          <Typography variant="h5" sx={{ fontWeight: 850, color: 'text.primary', letterSpacing: '-0.03em' }}>
-            Security Policy &amp; Engine Rules
-          </Typography>
-          <Chip
-            label="ENTERPRISE GUARD"
-            size="small"
-            sx={{
-              height: 24,
-              fontSize: '0.67rem',
-              fontWeight: 800,
-              backgroundColor: `${accentPrimary}15`,
-              color: accentPrimary,
-              border: `1px solid ${accentPrimary}35`,
-              borderRadius: '7px'
-            }}
-          />
-        </Box>
-        <Typography variant="body2" sx={{ color: textMuted, fontWeight: 500 }}>
-          Configure CI/CD gate fail thresholds, background verification cadence, and threat evaluation sandbox parameters.
+      {/* Header */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', letterSpacing: '-0.02em' }}>
+          Settings
+        </Typography>
+        <Typography variant="body2" sx={{ color: textMuted, mt: 0.25 }}>
+          Configure CI gate thresholds, verification intervals, and threat simulation sandboxes.
         </Typography>
       </Box>
 
@@ -75,55 +56,42 @@ export const SettingsPage: React.FC = () => {
         <Alert
           severity="success"
           sx={{
-            mb: 3,
-            borderRadius: '12px',
-            fontWeight: 700,
-            border: `1px solid ${accentPrimary}40`,
-            backgroundColor: `${accentPrimary}12`
+            mb: 2.5,
+            borderRadius: '6px',
+            fontSize: '0.82rem',
           }}
         >
-          Security policy configurations saved successfully.
+          Settings updated successfully.
         </Alert>
       )}
 
-      {/* ── 1. SCAN & CI GATE POLICY ─────────────────────────────────────────── */}
+      {/* 1. Scan & CI Gate Policy */}
       <Paper
         variant="outlined"
         sx={{
-          p: 3.5,
-          mb: 3,
-          borderRadius: '16px',
+          p: 3,
+          mb: 2.5,
+          borderRadius: '10px',
           backgroundColor: surface,
           borderColor: border,
-          boxShadow: isDark ? '0 12px 32px rgba(0,0,0,0.45)' : '0 6px 20px rgba(13,17,23,0.05)'
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-          <Box sx={{
-            width: 38,
-            height: 38,
-            borderRadius: '10px',
-            backgroundColor: `${accentPrimary}15`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <PolicyOutlinedIcon sx={{ color: accentPrimary, fontSize: 20 }} />
-          </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2 }}>
+          <PolicyOutlinedIcon sx={{ color: accent, fontSize: 20 }} />
           <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.015em' }}>
-              Verification Cadence &amp; CI Gate Policy
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.92rem' }}>
+              Verification &amp; CI Gate Policy
             </Typography>
             <Typography variant="caption" sx={{ color: textMuted }}>
-              Automated rules for pipeline halting and local verification
+              Automated rules for pipeline gating and local background checks
             </Typography>
           </Box>
         </Box>
 
-        <Grid container spacing={3}>
+        <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
-            <Typography variant="caption" sx={{ color: textMuted, fontWeight: 800, display: 'block', mb: 1, letterSpacing: '0.04em', fontSize: '0.72rem' }}>
-              CI/CD FAIL THRESHOLD
+            <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, display: 'block', mb: 0.75, fontSize: '0.74rem' }}>
+              CI GATE FAIL THRESHOLD
             </Typography>
             <Select
               fullWidth
@@ -131,20 +99,21 @@ export const SettingsPage: React.FC = () => {
               value={failOn}
               onChange={(e) => setFailOn(e.target.value)}
               sx={{
-                borderRadius: '9px',
+                borderRadius: '6px',
+                fontSize: '0.82rem',
                 backgroundColor: surfaceMuted,
                 '& fieldset': { borderColor: border }
               }}
             >
-              <MenuItem value="high">High risk only (recommended)</MenuItem>
-              <MenuItem value="medium">Medium &amp; high risk alterations</MenuItem>
-              <MenuItem value="low">Strict mode — any manifest change</MenuItem>
+              <MenuItem value="high" sx={{ fontSize: '0.82rem' }}>High severity alterations only</MenuItem>
+              <MenuItem value="medium" sx={{ fontSize: '0.82rem' }}>Medium &amp; high severity alterations</MenuItem>
+              <MenuItem value="low" sx={{ fontSize: '0.82rem' }}>Strict mode (any manifest change)</MenuItem>
             </Select>
           </Grid>
 
           <Grid item xs={12} sm={6}>
-            <Typography variant="caption" sx={{ color: textMuted, fontWeight: 800, display: 'block', mb: 1, letterSpacing: '0.04em', fontSize: '0.72rem' }}>
-              BACKGROUND VERIFICATION FREQUENCY
+            <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, display: 'block', mb: 0.75, fontSize: '0.74rem' }}>
+              BACKGROUND CHECK INTERVAL
             </Typography>
             <Select
               fullWidth
@@ -152,50 +121,40 @@ export const SettingsPage: React.FC = () => {
               value={scanFreq}
               onChange={(e) => setScanFreq(e.target.value)}
               sx={{
-                borderRadius: '9px',
+                borderRadius: '6px',
+                fontSize: '0.82rem',
                 backgroundColor: surfaceMuted,
                 '& fieldset': { borderColor: border }
               }}
             >
-              <MenuItem value="1">Continuous — every 1 minute</MenuItem>
-              <MenuItem value="5">Standard — every 5 minutes</MenuItem>
-              <MenuItem value="15">Relaxed — every 15 minutes</MenuItem>
-              <MenuItem value="manual">Manual verification only</MenuItem>
+              <MenuItem value="1" sx={{ fontSize: '0.82rem' }}>Every 1 minute</MenuItem>
+              <MenuItem value="5" sx={{ fontSize: '0.82rem' }}>Every 5 minutes (standard)</MenuItem>
+              <MenuItem value="15" sx={{ fontSize: '0.82rem' }}>Every 15 minutes</MenuItem>
+              <MenuItem value="manual" sx={{ fontSize: '0.82rem' }}>Manual scan only</MenuItem>
             </Select>
           </Grid>
         </Grid>
       </Paper>
 
-      {/* ── 2. NOTIFICATIONS & ALERTS ────────────────────────────────────────── */}
+      {/* 2. Notifications & Alerts */}
       <Paper
         variant="outlined"
         sx={{
-          p: 3.5,
-          mb: 3,
-          borderRadius: '16px',
+          p: 3,
+          mb: 2.5,
+          borderRadius: '10px',
           backgroundColor: surface,
           borderColor: border,
-          boxShadow: isDark ? '0 12px 32px rgba(0,0,0,0.45)' : '0 6px 20px rgba(13,17,23,0.05)'
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-          <Box sx={{
-            width: 38,
-            height: 38,
-            borderRadius: '10px',
-            backgroundColor: `${accentViolet}15`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <NotificationsActiveOutlinedIcon sx={{ color: accentViolet, fontSize: 20 }} />
-          </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5 }}>
+          <NotificationsOutlinedIcon sx={{ color: accent, fontSize: 20 }} />
           <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.015em' }}>
-              IDE &amp; Desktop Notifications
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.92rem' }}>
+              Editor Notifications
             </Typography>
             <Typography variant="caption" sx={{ color: textMuted }}>
-              Push live alerts directly to developer status bar upon drift detection
+              Push status notifications to the IDE status bar
             </Typography>
           </Box>
         </Box>
@@ -203,117 +162,102 @@ export const SettingsPage: React.FC = () => {
         <FormControlLabel
           control={
             <Switch
+              size="small"
               checked={vscodeNotify}
               onChange={(e) => setVscodeNotify(e.target.checked)}
               sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': { color: accentPrimary },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: accentPrimary }
+                '& .MuiSwitch-switchBase.Mui-checked': { color: accent },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: accent }
               }}
             />
           }
           label={
-            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              Display real-time VS Code, Cursor AI, and Windsurf status bar alerts when trust drift occurs
+            <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.84rem' }}>
+              Notify in VS Code, Cursor, and Windsurf status bar when drift is detected
             </Typography>
           }
         />
       </Paper>
 
       {/* Save Button */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 3 }}>
         <Button
           variant="contained"
+          size="small"
           onClick={handleSave}
-          startIcon={<CheckIcon />}
+          startIcon={<CheckIcon sx={{ fontSize: 16 }} />}
           sx={{
             textTransform: 'none',
-            fontWeight: 750,
-            borderRadius: '9px',
-            px: 3.5,
-            py: 1.1,
-            fontSize: '0.88rem'
+            fontWeight: 600,
+            borderRadius: '6px',
+            px: 2,
+            py: 0.6,
+            fontSize: '0.82rem'
           }}
         >
-          Save Security Policy
+          Save Preferences
         </Button>
       </Box>
 
-      <Divider sx={{ borderColor: border, mb: 4 }} />
+      <Divider sx={{ borderColor: border, mb: 3 }} />
 
-      {/* ── 3. EVALUATION DEMO THREAT SANDBOX ────────────────────────────────── */}
+      {/* 3. Demo / Simulation Sandbox */}
       <Paper
         variant="outlined"
         sx={{
-          p: 3.5,
-          borderRadius: '16px',
+          p: 3,
+          borderRadius: '10px',
           backgroundColor: surface,
-          borderColor: `${warningColor}40`,
-          boxShadow: isDark ? '0 12px 32px rgba(0,0,0,0.45)' : '0 6px 20px rgba(13,17,23,0.05)'
+          borderColor: border,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-          <Box sx={{
-            width: 38,
-            height: 38,
-            borderRadius: '10px',
-            backgroundColor: `${warningColor}15`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <BoltIcon sx={{ color: warningColor, fontSize: 20 }} />
-          </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1 }}>
+          <ScienceOutlinedIcon sx={{ color: textMuted, fontSize: 20 }} />
           <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 850, color: 'text.primary', letterSpacing: '-0.015em' }}>
-              Evaluation Demo &amp; Threat Simulation Sandbox
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.92rem' }}>
+              Simulation Sandbox
             </Typography>
             <Typography variant="caption" sx={{ color: textMuted }}>
-              Simulates real-world capability alteration in 1 click for testing
+              Inject sample capability drift on local manifests for verification testing
             </Typography>
           </Box>
         </Box>
 
-        <Typography variant="body2" sx={{ color: textMuted, mb: 3, lineHeight: 1.65, fontSize: '0.86rem' }}>
-          Instantly simulates an unauthorized capability expansion (network egress + debug shell privileges) on a production tool manifest without touching real host security.
+        <Typography variant="body2" sx={{ color: textMuted, mb: 2, fontSize: '0.82rem' }}>
+          Simulates an unauthorized capability expansion (e.g. network egress or admin flag) on <code>npm:dev</code>.
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button
-            variant="contained"
+            variant="outlined"
             size="small"
-            startIcon={<BoltIcon sx={{ fontSize: '15px !important' }} />}
             onClick={loadJudgeDemo}
             sx={{
               textTransform: 'none',
-              fontWeight: 750,
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #FFB340 0%, #D97706 100%)',
-              boxShadow: '0 3px 12px rgba(217, 119, 6, 0.35)',
-              color: '#fff',
-              px: 2.5,
-              py: 0.85,
-              '&:hover': {
-                background: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)',
-                boxShadow: '0 5px 16px rgba(217, 119, 6, 0.45)',
-              }
+              fontWeight: 600,
+              fontSize: '0.82rem',
+              borderRadius: '6px',
+              borderColor: border,
+              color: textMuted,
+              px: 1.75,
+              py: 0.5,
+              '&:hover': { borderColor: 'text.primary', color: 'text.primary' }
             }}
           >
-            {isJudgeDemoActive ? 'Restart Simulation' : 'Launch Simulation Threat'}
+            {isJudgeDemoActive ? 'Reset Simulation' : 'Launch Simulation'}
           </Button>
 
           {isJudgeDemoActive && (
             <Button
-              variant="outlined"
+              variant="text"
               size="small"
               onClick={exitJudgeDemo}
               sx={{
                 textTransform: 'none',
-                fontWeight: 700,
-                borderRadius: '8px',
-                borderColor: border,
+                fontWeight: 500,
+                fontSize: '0.82rem',
                 color: textMuted,
-                px: 2,
-                py: 0.85
+                '&:hover': { color: 'text.primary' }
               }}
             >
               Exit Simulation
@@ -321,20 +265,18 @@ export const SettingsPage: React.FC = () => {
           )}
 
           <Button
-            variant="outlined"
+            variant="text"
             size="small"
             onClick={resetToBaseline}
             sx={{
               textTransform: 'none',
-              fontWeight: 700,
-              borderRadius: '8px',
-              borderColor: border,
+              fontWeight: 500,
+              fontSize: '0.82rem',
               color: textMuted,
-              px: 2,
-              py: 0.85
+              '&:hover': { color: 'text.primary' }
             }}
           >
-            Reset Immutable Baseline
+            Reset Baseline State
           </Button>
         </Box>
       </Paper>
