@@ -1,0 +1,28 @@
+{
+  "name": "@toolguard/functions",
+  "version": "1.0.0",
+  "description": "Firebase Cloud Functions for ToolGuard backend",
+  "scripts": {
+    "build": "tsc",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "dist/index.js",
+  "dependencies": {
+    "@toolguard/core": "workspace:*",
+    "@toolguard/shared": "workspace:*",
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  },
+  "private": true
+}
