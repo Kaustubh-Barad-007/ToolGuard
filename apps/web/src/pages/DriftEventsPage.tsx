@@ -9,7 +9,8 @@ import {
   Tab,
   Pagination,
   Collapse,
-  useTheme
+  useTheme,
+  CircularProgress
 } from '@mui/material';
 import CodeIcon from '@mui/icons-material/Code';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -26,7 +27,7 @@ import { DiffViewer } from '../components/DiffViewer';
 export const DriftEventsPage: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const { driftEvents, acceptDriftEvent, triggerScan, loadJudgeDemo, baseline, tools } = useDemoData();
+  const { driftEvents, acceptDriftEvent, triggerScan, loadJudgeDemo, baseline, tools, isVerifying } = useDemoData();
   const [filter, setFilter] = useState<'all' | 'high' | 'review' | 'resolved'>('all');
   const [page, setPage] = useState(1);
   const [selectedEvent, setSelectedEvent] = useState<{ eventId: string; toolId: string } | null>(null);
@@ -175,6 +176,8 @@ export const DriftEventsPage: React.FC = () => {
             <Button
               variant="contained"
               size="small"
+              disabled={isVerifying}
+              startIcon={isVerifying ? <CircularProgress size={13} color="inherit" /> : null}
               onClick={triggerScan}
               sx={{
                 textTransform: 'none',
@@ -185,7 +188,7 @@ export const DriftEventsPage: React.FC = () => {
                 py: 0.6
               }}
             >
-              Run Verification Scan
+              {isVerifying ? 'Verifying Baseline…' : 'Run Verification Scan'}
             </Button>
             <Button
               variant="outlined"

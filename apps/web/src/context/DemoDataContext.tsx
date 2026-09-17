@@ -37,6 +37,8 @@ interface DemoContextType {
   disconnectProject: () => void;
   loadJudgeDemo: () => void;
   exitJudgeDemo: () => void;
+  isVerifying: boolean;
+  loadIdeWorkspace: () => Promise<void>;
   triggerScan: () => Promise<ScanResult | null>;
   acceptDriftEvent: (eventId: string, toolId: string) => Promise<void>;
   createNewBaseline: () => Promise<void>;
@@ -99,6 +101,70 @@ const DEMO_TOOLS: ToolDefinition[] = [
   }
 ];
 
+// Rich Multi-Ecosystem IDE Tools (MCP, NPM, VS Code tasks, Autonomous Agent)
+const IDE_ECOSYSTEM_TOOLS: ToolDefinition[] = [
+  {
+    id: 'mcp-filesystem',
+    name: 'mcp:filesystem',
+    description: 'Model Context Protocol local filesystem provider',
+    version: '1.2.0',
+    permissions: ['read', 'write'],
+    endpoint: 'local',
+    execution: { enabled: true, command: 'npx @modelcontextprotocol/server-filesystem ./workspace', isolated: true },
+    metadata: { ecosystem: 'mcp' }
+  },
+  {
+    id: 'mcp-github',
+    name: 'mcp:github',
+    description: 'Model Context Protocol GitHub integration for PRs & issues',
+    version: '2.0.1',
+    permissions: ['read', 'network'],
+    endpoint: 'https://api.github.com',
+    execution: { enabled: false },
+    metadata: { ecosystem: 'mcp' }
+  },
+  {
+    id: 'npm-dev',
+    name: 'npm:dev',
+    description: 'Vite development server runner',
+    version: '1.0.0',
+    permissions: ['execute', 'read'],
+    endpoint: 'local',
+    execution: { enabled: true, command: 'vite', isolated: false },
+    metadata: { ecosystem: 'npm' }
+  },
+  {
+    id: 'npm-build',
+    name: 'npm:build',
+    description: 'Production asset bundling & optimization pipeline',
+    version: '1.0.0',
+    permissions: ['execute', 'read', 'write'],
+    endpoint: 'local',
+    execution: { enabled: true, command: 'vite build', isolated: false },
+    metadata: { ecosystem: 'npm' }
+  },
+  {
+    id: 'agent-reviewer',
+    name: 'agent:code_reviewer',
+    description: 'Autonomous zero-trust code security audit capability',
+    version: '1.0.0',
+    permissions: ['read'],
+    endpoint: 'local',
+    execution: { enabled: false },
+    metadata: { ecosystem: 'agent' }
+  },
+  {
+    id: 'vscode-typecheck',
+    name: 'vscode:typecheck',
+    description: 'Continuous TypeScript type verification background task',
+    version: '1.0.0',
+    permissions: ['execute', 'read'],
+    endpoint: 'local',
+    execution: { enabled: true, command: 'tsc --watch', isolated: false },
+    metadata: { ecosystem: 'vscode' }
+  }
+];
+
 const DEMO_BASELINE = BaselineManager.createBaseline(
   DEMO_TOOLS,
   'Demo-App',
@@ -128,6 +194,7 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [isJudgeDemoActive, setIsJudgeDemoActive] = useState<boolean>(false);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
 
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId) || null;
 
@@ -510,52 +577,72 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  // Load Rich Multi-Ecosystem IDE Workspace
+  const loadIdeWorkspace = async (): Promise<void> => {
+    setIsVerifying(true);
+    await new Promise(r => setTimeout(r, 380));
+    const sampleBaseline = BaselineManager.createBaseline(
+      IDE_ECOSYSTEM_TOOLS,
+      'Fullstack-App',
+      'developer@workspace.local',
+      1
+    );
+    importWorkspaceBaseline(sampleBaseline, 'Fullstack-App', IDE_ECOSYSTEM_TOOLS);
+    setIsVerifying(false);
+  };
+
   // Run Scan
   const triggerScan = async (): Promise<ScanResult | null> => {
+    setIsVerifying(true);
+    await new Promise(r => setTimeout(r, 360));
     setLastScanTime('Just now');
-    if (tools.length > 0 && baseline && baseline.baselineId !== 'bl-empty') {
-      const res = BaselineManager.compare(tools, baseline);
-      setScanStatuses(res.tools);
-      const detected = res.tools.filter(t => t.driftDetected);
-      if (detected.length > 0) {
-        const events: DriftEvent[] = detected.map(d => ({
-          eventId: `drift-${Date.now()}-${d.toolId}`,
-          projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
-          toolId: d.toolId,
-          toolName: d.name,
-          baselineId: baseline.baselineId,
-          scanId: `scan-${Date.now()}`,
-          detectedAt: new Date().toISOString(),
-          status: 'open',
-          severity: d.status === 'HIGH RISK' ? 'high' : 'medium',
-          changes: d.changes
-        }));
-        setDriftEvents(events);
-        const audit: AuditEvent = {
-          auditId: `audit-${Date.now()}`,
-          action: 'DRIFT_DETECTED',
-          actorId: 'system',
-          projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
-          timestamp: new Date().toISOString(),
-          metadata: { details: `Verification scan detected ${detected.length} unauthorized capability drift(s).` }
-        };
-        setAuditLogs(prev => [audit, ...prev]);
-        return res;
-      } else {
-        setDriftEvents([]);
-        const audit: AuditEvent = {
-          auditId: `audit-${Date.now()}`,
-          action: 'SCAN_COMPLETED',
-          actorId: 'system',
-          projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
-          timestamp: new Date().toISOString(),
-          metadata: { details: `Verification scan completed: all ${tools.length} tools verified against SHA-256 baseline (SAFE).` }
-        };
-        setAuditLogs(prev => [audit, ...prev]);
-        return res;
+    try {
+      if (tools.length > 0 && baseline && baseline.baselineId !== 'bl-empty') {
+        const res = BaselineManager.compare(tools, baseline);
+        setScanStatuses(res.tools);
+        const detected = res.tools.filter(t => t.driftDetected);
+        if (detected.length > 0) {
+          const events: DriftEvent[] = detected.map(d => ({
+            eventId: `drift-${Date.now()}-${d.toolId}`,
+            projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
+            toolId: d.toolId,
+            toolName: d.name,
+            baselineId: baseline.baselineId,
+            scanId: `scan-${Date.now()}`,
+            detectedAt: new Date().toISOString(),
+            status: 'open',
+            severity: d.status === 'HIGH RISK' ? 'high' : 'medium',
+            changes: d.changes
+          }));
+          setDriftEvents(events);
+          const audit: AuditEvent = {
+            auditId: `audit-${Date.now()}`,
+            action: 'DRIFT_DETECTED',
+            actorId: 'system',
+            projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
+            timestamp: new Date().toISOString(),
+            metadata: { details: `Verification scan detected ${detected.length} unauthorized capability drift(s).` }
+          };
+          setAuditLogs(prev => [audit, ...prev]);
+          return res;
+        } else {
+          setDriftEvents([]);
+          const audit: AuditEvent = {
+            auditId: `audit-${Date.now()}`,
+            action: 'SCAN_COMPLETED',
+            actorId: 'system',
+            projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
+            timestamp: new Date().toISOString(),
+            metadata: { details: `Verification scan completed: all ${tools.length} tools verified against SHA-256 baseline (SAFE).` }
+          };
+          setAuditLogs(prev => [audit, ...prev]);
+          return res;
+        }
       }
+      return null;
+    } finally {
+      setIsVerifying(false);
     }
-    return null;
   };
 
   // Accept drift and update baseline
@@ -703,6 +790,8 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         disconnectProject,
         loadJudgeDemo,
         exitJudgeDemo,
+        isVerifying,
+        loadIdeWorkspace,
         triggerScan,
         acceptDriftEvent,
         createNewBaseline,

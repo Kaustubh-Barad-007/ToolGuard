@@ -79,6 +79,7 @@ export const AppShell: React.FC = () => {
     activeWorkspaceId,
     activeWorkspace,
     isJudgeDemoActive,
+    isVerifying,
     loadJudgeDemo,
     exitJudgeDemo,
     switchWorkspace,
@@ -416,6 +417,20 @@ export const AppShell: React.FC = () => {
             </Tooltip>
           </Box>
         </Toolbar>
+        {isVerifying && (
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: 2,
+              background: 'linear-gradient(90deg, #10b981 0%, #6366f1 50%, #10b981 100%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmerScan 1.2s infinite linear'
+            }}
+          />
+        )}
       </AppBar>
 
       {/* ── WORKSPACE SELECTOR DROPDOWN MENU ─────────────────────────────────── */}

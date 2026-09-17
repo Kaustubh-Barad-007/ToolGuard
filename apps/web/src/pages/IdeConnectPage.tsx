@@ -12,7 +12,8 @@ import {
   Tabs,
   Tab,
   Divider,
-  useTheme
+  useTheme,
+  CircularProgress
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
@@ -45,7 +46,7 @@ export const IdeConnectPage: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const navigate = useNavigate();
-  const { importWorkspaceBaseline, loadJudgeDemo } = useDemoData();
+  const { importWorkspaceBaseline, loadJudgeDemo, loadIdeWorkspace, isVerifying } = useDemoData();
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeIdeTab, setActiveIdeTab] = useState(0);
@@ -150,24 +151,47 @@ export const IdeConnectPage: React.FC = () => {
           </Typography>
         </Box>
 
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={() => { loadJudgeDemo(); navigate('/drift'); }}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.82rem',
-            borderRadius: '6px',
-            borderColor: border,
-            color: textMuted,
-            px: 1.75,
-            py: 0.6,
-            '&:hover': { borderColor: 'text.primary', color: 'text.primary' }
-          }}
-        >
-          Load Demo Workspace
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Button
+            variant="contained"
+            size="small"
+            disabled={isVerifying}
+            startIcon={isVerifying ? <CircularProgress size={13} color="inherit" /> : <CodeIcon sx={{ fontSize: 16 }} />}
+            onClick={() => loadIdeWorkspace()}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 650,
+              fontSize: '0.82rem',
+              borderRadius: '6px',
+              backgroundColor: isDark ? '#10b981' : '#059669',
+              color: '#ffffff',
+              px: 1.75,
+              py: 0.6,
+              '&:hover': { backgroundColor: isDark ? '#059669' : '#047857' }
+            }}
+          >
+            {isVerifying ? 'Connecting IDE Suite…' : '⚡ 1-Click Connect IDE Suite'}
+          </Button>
+
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => { loadJudgeDemo(); navigate('/drift'); }}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.82rem',
+              borderRadius: '6px',
+              borderColor: border,
+              color: textMuted,
+              px: 1.75,
+              py: 0.6,
+              '&:hover': { borderColor: 'text.primary', color: 'text.primary' }
+            }}
+          >
+            Load Demo Workspace
+          </Button>
+        </Box>
       </Box>
 
       <Grid container spacing={2.5}>

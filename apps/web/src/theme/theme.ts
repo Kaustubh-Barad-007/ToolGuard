@@ -68,25 +68,30 @@ export const getToolGuardTheme = (mode: 'dark' | 'light' = 'light') => {
       MuiCssBaseline: {
         styleOverrides: {
           '@keyframes statusPulse': {
-            '0%': { transform: 'scale(0.95)', opacity: 0.95 },
-            '50%': { transform: 'scale(1.3)', opacity: 0.4 },
-            '100%': { transform: 'scale(0.95)', opacity: 0.95 }
+            '0%': { transform: 'scale(1)', opacity: 0.95 },
+            '50%': { transform: 'scale(1.15)', opacity: 0.65 },
+            '100%': { transform: 'scale(1)', opacity: 0.95 }
+          },
+          '@keyframes shimmerScan': {
+            '0%': { backgroundPosition: '-200% 0' },
+            '100%': { backgroundPosition: '200% 0' }
+          },
+          '@keyframes fadeIn': {
+            '0%': { opacity: 0, transform: 'translateY(3px)' },
+            '100%': { opacity: 1, transform: 'translateY(0)' }
           },
           body: {
             backgroundColor: isDark ? '#0A0E1A' : '#FAFBFE',
-            backgroundImage: isDark
-              ? 'none'
-              : 'radial-gradient(at 15% 0%, rgba(0, 212, 170, 0.04) 0px, transparent 40%), radial-gradient(at 85% 0%, rgba(124, 92, 252, 0.035) 0px, transparent 40%), #FAFBFE',
-            backgroundAttachment: 'fixed',
+            backgroundImage: 'none',
             color: isDark ? '#F0F2F8' : '#0D1117',
             scrollbarColor: isDark ? '#1C2333 #0A0E1A' : '#CBD5E1 #FAFBFE',
             '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
-              width: 7,
-              height: 7
+              width: 6,
+              height: 6
             },
             '&::-webkit-scrollbar-thumb, & *::-webkit-scrollbar-thumb': {
-              borderRadius: 4,
-              backgroundColor: isDark ? '#1C2333' : '#CBD5E1'
+              borderRadius: 3,
+              backgroundColor: isDark ? '#263147' : '#CBD5E1'
             }
           }
         }
@@ -94,48 +99,41 @@ export const getToolGuardTheme = (mode: 'dark' | 'light' = 'light') => {
       MuiButton: {
         styleOverrides: {
           root: {
-            borderRadius: 8,
-            padding: '7px 16px',
+            borderRadius: 7,
+            padding: '6px 14px',
             boxShadow: 'none',
             fontWeight: 650,
             textTransform: 'none',
             fontSize: '0.8125rem',
             letterSpacing: '-0.005em',
-            transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
             '&:hover': {
               boxShadow: 'none',
-              transform: 'translateY(-1px)'
+              transform: 'translateY(-0.5px)'
             },
             '&:active': {
-              transform: 'translateY(0)'
+              transform: 'scale(0.98)'
             }
           },
           containedPrimary: {
-            background: isDark
-              ? 'linear-gradient(135deg, #00D4AA 0%, #008B72 100%)'
-              : 'linear-gradient(135deg, #00C49A 0%, #008B72 100%)',
+            backgroundColor: '#10b981',
             color: '#ffffff',
-            boxShadow: isDark
-              ? '0 2px 12px rgba(0, 212, 170, 0.3)'
-              : '0 2px 10px rgba(0, 139, 114, 0.25)',
+            border: '1px solid rgba(16, 185, 129, 0.4)',
+            boxShadow: 'none',
             '&:hover': {
-              background: isDark
-                ? 'linear-gradient(135deg, #00B896 0%, #006B5A 100%)'
-                : 'linear-gradient(135deg, #008B72 0%, #006B5A 100%)',
-              boxShadow: isDark
-                ? '0 4px 18px rgba(0, 212, 170, 0.4)'
-                : '0 4px 14px rgba(0, 139, 114, 0.35)'
+              backgroundColor: '#059669',
+              boxShadow: 'none'
             }
           },
           outlined: {
             borderColor: isDark ? '#1C2333' : '#E5E9F2',
             backgroundColor: isDark ? 'transparent' : '#ffffff',
             color: isDark ? '#F0F2F8' : '#0D1117',
-            boxShadow: isDark ? 'none' : '0 1px 2px rgba(13, 17, 23, 0.03)',
+            boxShadow: 'none',
             '&:hover': {
-              borderColor: isDark ? '#2D3A52' : '#C8CED9',
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F7F8FC',
-              boxShadow: isDark ? 'none' : '0 2px 6px rgba(13, 17, 23, 0.05)'
+              borderColor: isDark ? '#2D3A52' : '#CBD5E1',
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC',
+              boxShadow: 'none'
             }
           }
         }
@@ -146,9 +144,7 @@ export const getToolGuardTheme = (mode: 'dark' | 'light' = 'light') => {
             backgroundImage: 'none',
             backgroundColor: isDark ? '#111827' : '#ffffff',
             borderColor: isDark ? '#1C2333' : '#E5E9F2',
-            boxShadow: isDark
-              ? '0 4px 20px rgba(0, 0, 0, 0.45)'
-              : '0 1px 3px rgba(13, 17, 23, 0.03), 0 6px 18px -3px rgba(13, 17, 23, 0.05)'
+            boxShadow: 'none'
           }
         }
       },
@@ -156,12 +152,12 @@ export const getToolGuardTheme = (mode: 'dark' | 'light' = 'light') => {
         styleOverrides: {
           root: {
             borderBottom: `1px solid ${isDark ? '#1C2333' : '#F1F3F9'}`,
-            padding: '12px 16px',
+            padding: '11px 15px',
             fontSize: '0.82rem'
           },
           head: {
             fontWeight: 750,
-            fontSize: '0.7rem',
+            fontSize: '0.6875rem',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
             color: isDark ? '#6B7A99' : '#5A6578',
@@ -174,9 +170,9 @@ export const getToolGuardTheme = (mode: 'dark' | 'light' = 'light') => {
         styleOverrides: {
           root: {
             fontWeight: 650,
-            fontSize: '0.72rem',
-            height: 24,
-            borderRadius: 7
+            fontSize: '0.7rem',
+            height: 22,
+            borderRadius: 6
           }
         }
       }

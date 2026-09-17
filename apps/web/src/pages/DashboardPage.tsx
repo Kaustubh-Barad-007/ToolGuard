@@ -21,7 +21,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  useTheme
+  useTheme,
+  LinearProgress
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -38,6 +39,7 @@ import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
 import FingerprintOutlinedIcon from '@mui/icons-material/FingerprintOutlined';
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import CodeIcon from '@mui/icons-material/Code';
 import { ToolScanStatus } from '@toolguard/shared';
 import { useDemoData } from '../context/DemoDataContext';
 import { StatusBadge } from '../components/StatusBadge';
@@ -55,12 +57,22 @@ export const DashboardPage: React.FC = () => {
     triggerScan,
     baseline,
     activeWorkspace,
+    isVerifying,
+    loadIdeWorkspace,
     loadJudgeDemo,
     simulateDrift,
     resetToBaseline,
     deleteTool,
     disconnectProject,
   } = useDemoData();
+
+  const getEcosystemBadge = (name: string) => {
+    if (name.startsWith('mcp:')) return { label: 'MCP', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' };
+    if (name.startsWith('npm:')) return { label: 'NPM', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' };
+    if (name.startsWith('agent:')) return { label: 'AGENT', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' };
+    if (name.startsWith('vscode:')) return { label: 'VS CODE', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' };
+    return { label: 'TOOL', color: '#64748b', bg: 'rgba(100, 116, 139, 0.1)' };
+  };
 
   const [scanning, setScanning] = useState(false);
   const [copiedCmd, setCopiedCmd] = useState(false);
@@ -208,6 +220,25 @@ export const DashboardPage: React.FC = () => {
             <Button
               variant="contained"
               size="small"
+              disabled={isVerifying}
+              startIcon={isVerifying ? <CircularProgress size={13} color="inherit" /> : <CodeIcon sx={{ fontSize: 16 }} />}
+              onClick={() => loadIdeWorkspace()}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 650,
+                borderRadius: '6px',
+                px: 2,
+                py: 0.8,
+                backgroundColor: isDark ? '#10b981' : '#059669',
+                color: '#ffffff',
+                '&:hover': { backgroundColor: isDark ? '#059669' : '#047857' }
+              }}
+            >
+              {isVerifying ? 'Connecting IDE Suite…' : '⚡ Load Active IDE Project (VS Code + MCP + NPM)'}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
               onClick={() => navigate('/integrations')}
               sx={{
                 textTransform: 'none',
@@ -215,6 +246,8 @@ export const DashboardPage: React.FC = () => {
                 borderRadius: '6px',
                 px: 2,
                 py: 0.8,
+                borderColor: border,
+                color: 'text.primary',
               }}
             >
               Setup Guides
@@ -230,7 +263,7 @@ export const DashboardPage: React.FC = () => {
                 px: 2,
                 py: 0.8,
                 borderColor: border,
-                color: 'text.primary',
+                color: textMuted,
               }}
             >
               Load Example Project
@@ -308,9 +341,9 @@ export const DashboardPage: React.FC = () => {
           <Button
             variant="contained"
             size="small"
-            startIcon={scanning ? <CircularProgress size={13} color="inherit" /> : <PlayArrowIcon sx={{ fontSize: 16 }} />}
+            startIcon={(scanning || isVerifying) ? <CircularProgress size={13} color="inherit" /> : <PlayArrowIcon sx={{ fontSize: 16 }} />}
             onClick={handleScan}
-            disabled={scanning}
+            disabled={scanning || isVerifying}
             sx={{
               textTransform: 'none',
               fontWeight: 600,
@@ -320,7 +353,26 @@ export const DashboardPage: React.FC = () => {
               py: 0.6,
             }}
           >
-            {scanning ? 'Scanning…' : 'Run Scan'}
+            {(scanning || isVerifying) ? 'Verifying Baseline…' : 'Run Scan'}
+          </Button>
+
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={isVerifying}
+            startIcon={isVerifying ? <CircularProgress size={13} color="inherit" /> : <CodeIcon sx={{ fontSize: 15 }} />}
+            onClick={() => loadIdeWorkspace()}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.82rem',
+              borderRadius: '6px',
+              borderColor: border,
+              color: 'text.primary',
+              '&:hover': { borderColor: accent, color: accent }
+            }}
+          >
+            Load IDE Suite
           </Button>
 
           {!isProtected ? (
@@ -537,6 +589,18 @@ export const DashboardPage: React.FC = () => {
           borderColor: border,
         }}
       >
+        {isVerifying && (
+          <LinearProgress
+            sx={{
+              height: 2,
+              backgroundColor: 'transparent',
+              '& .MuiLinearProgress-bar': {
+                background: 'linear-gradient(90deg, #10b981 0%, #6366f1 50%, #10b981 100%)',
+                animation: 'shimmerScan 1.2s infinite linear'
+              }
+            }}
+          />
+        )}
         <Table size="small">
           <TableHead>
             <TableRow sx={{ backgroundColor: surfaceMuted }}>
@@ -569,6 +633,7 @@ export const DashboardPage: React.FC = () => {
                 const toolDef = tools.find(t => (t.id || t.name) === tool.toolId || t.name === tool.name);
                 const hasAdmin = toolDef?.permissions?.includes('admin');
                 const hasNetwork = toolDef?.permissions?.includes('network');
+                const eco = getEcosystemBadge(tool.name);
 
                 return (
                   <TableRow
@@ -582,7 +647,20 @@ export const DashboardPage: React.FC = () => {
                     {/* Tool Identifier */}
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <TerminalOutlinedIcon sx={{ fontSize: 16, color: textMuted }} />
+                        <Chip
+                          label={eco.label}
+                          size="small"
+                          sx={{
+                            height: 18,
+                            fontSize: '0.62rem',
+                            fontWeight: 700,
+                            borderRadius: '4px',
+                            backgroundColor: eco.bg,
+                            color: eco.color,
+                            border: `1px solid ${eco.color}33`,
+                            px: 0.5,
+                          }}
+                        />
                         <Typography sx={{
                           fontWeight: 600,
                           color: 'text.primary',
