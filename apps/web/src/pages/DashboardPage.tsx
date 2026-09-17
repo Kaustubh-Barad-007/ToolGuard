@@ -81,6 +81,7 @@ export const DashboardPage: React.FC = () => {
   const [toolToDelete, setToolToDelete] = useState<ToolScanStatus | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [scanFeedback, setScanFeedback] = useState<{ severity: 'error' | 'success'; message: string } | null>(null);
+  const [installTab, setInstallTab] = useState<'windows' | 'mac' | 'npm'>('windows');
 
   const openDrift = driftEvents.filter(e => e.status === 'open');
   const isProtected = openDrift.length === 0;
@@ -151,10 +152,15 @@ export const DashboardPage: React.FC = () => {
 
   // Empty state
   if (!activeWorkspace || scanStatuses.length === 0) {
-    const installScript = `npm install -g https://toolguard-app.vercel.app/toolguard.tgz\ntoolguard init -y\ntoolguard scan`;
+    const installCommands = {
+      windows: 'irm https://toolguard-app.vercel.app/install.ps1 | iex',
+      mac: 'curl -fsSL https://toolguard-app.vercel.app/install.sh | bash',
+      npm: 'npm install -g https://toolguard-app.vercel.app/toolguard.tgz\ntoolguard quickstart'
+    };
+    const activeCommand = installCommands[installTab];
 
     return (
-      <Box sx={{ maxWidth: 680, mx: 'auto', pt: 8, pb: 6 }}>
+      <Box sx={{ maxWidth: 720, mx: 'auto', pt: 7, pb: 6 }}>
         <Paper
           variant="outlined"
           sx={{
@@ -181,22 +187,68 @@ export const DashboardPage: React.FC = () => {
                 No Active Project Connected
               </Typography>
               <Typography variant="body2" sx={{ color: textMuted }}>
-                Initialize ToolGuard in your repository to monitor agent tool capabilities.
+                Run the 1-line installer in your terminal, or load an active multi-ecosystem IDE project.
               </Typography>
             </Box>
           </Box>
 
           <Box sx={{ my: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: textMuted, letterSpacing: '0.04em' }}>
-                TERMINAL SETUP
-              </Typography>
-              <Tooltip title={copiedCmd ? 'Copied' : 'Copy command'}>
-                <IconButton size="small" onClick={() => handleCopyCmd(installScript)} sx={{ color: textMuted }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 0.75 }}>
+                <Chip
+                  label="Windows (1-Liner)"
+                  size="small"
+                  clickable
+                  onClick={() => setInstallTab('windows')}
+                  sx={{
+                    height: 24,
+                    fontSize: '0.72rem',
+                    fontWeight: 650,
+                    borderRadius: '6px',
+                    backgroundColor: installTab === 'windows' ? (isDark ? 'rgba(0, 212, 170, 0.15)' : 'rgba(0, 139, 114, 0.12)') : 'transparent',
+                    color: installTab === 'windows' ? accent : textMuted,
+                    border: `1px solid ${installTab === 'windows' ? accent : border}`,
+                  }}
+                />
+                <Chip
+                  label="macOS / Linux (1-Liner)"
+                  size="small"
+                  clickable
+                  onClick={() => setInstallTab('mac')}
+                  sx={{
+                    height: 24,
+                    fontSize: '0.72rem',
+                    fontWeight: 650,
+                    borderRadius: '6px',
+                    backgroundColor: installTab === 'mac' ? (isDark ? 'rgba(0, 212, 170, 0.15)' : 'rgba(0, 139, 114, 0.12)') : 'transparent',
+                    color: installTab === 'mac' ? accent : textMuted,
+                    border: `1px solid ${installTab === 'mac' ? accent : border}`,
+                  }}
+                />
+                <Chip
+                  label="Universal NPM"
+                  size="small"
+                  clickable
+                  onClick={() => setInstallTab('npm')}
+                  sx={{
+                    height: 24,
+                    fontSize: '0.72rem',
+                    fontWeight: 650,
+                    borderRadius: '6px',
+                    backgroundColor: installTab === 'npm' ? (isDark ? 'rgba(0, 212, 170, 0.15)' : 'rgba(0, 139, 114, 0.12)') : 'transparent',
+                    color: installTab === 'npm' ? accent : textMuted,
+                    border: `1px solid ${installTab === 'npm' ? accent : border}`,
+                  }}
+                />
+              </Box>
+
+              <Tooltip title={copiedCmd ? 'Copied to Clipboard!' : 'Copy command'}>
+                <IconButton size="small" onClick={() => handleCopyCmd(activeCommand)} sx={{ color: textMuted }}>
                   {copiedCmd ? <CheckIcon sx={{ fontSize: 16, color: accent }} /> : <ContentCopyIcon sx={{ fontSize: 16 }} />}
                 </IconButton>
               </Tooltip>
             </Box>
+
             <Box
               component="pre"
               sx={{
@@ -212,8 +264,11 @@ export const DashboardPage: React.FC = () => {
                 overflowX: 'auto',
               }}
             >
-              {installScript}
+              {activeCommand}
             </Box>
+            <Typography variant="caption" sx={{ color: textMuted, mt: 1, display: 'block', fontSize: '0.72rem' }}>
+              ⚡ Auto-installs ToolGuard CLI globally and sets up VS Code &amp; Cursor AI extensions in 5 seconds.
+            </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>

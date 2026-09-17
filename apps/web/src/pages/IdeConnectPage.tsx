@@ -195,6 +195,45 @@ export const IdeConnectPage: React.FC = () => {
       </Box>
 
       <Grid container spacing={2.5}>
+        {/* Automated 1-Liner Quick Installation */}
+        <Grid item xs={12}>
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 3,
+              borderRadius: '10px',
+              backgroundColor: isDark ? 'rgba(0, 212, 170, 0.04)' : 'rgba(0, 139, 114, 0.03)',
+              border: `1px solid ${isDark ? 'rgba(0, 212, 170, 0.25)' : 'rgba(0, 139, 114, 0.2)'}`,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.94rem' }}>
+                  ⚡ Instant 1-Line Installer (Recommended)
+                </Typography>
+                <Typography variant="caption" sx={{ color: textMuted }}>
+                  Installs ToolGuard CLI and auto-configures VS Code, Cursor AI, &amp; Windsurf extensions with zero setup
+                </Typography>
+              </Box>
+            </Box>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, display: 'block', mb: 0.5, fontSize: '0.74rem' }}>
+                  Windows (PowerShell)
+                </Typography>
+                <CodeBlock text="irm https://toolguard-app.vercel.app/install.ps1 | iex" id="inst-ps1" />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, display: 'block', mb: 0.5, fontSize: '0.74rem' }}>
+                  macOS / Linux (Terminal)
+                </Typography>
+                <CodeBlock text="curl -fsSL https://toolguard-app.vercel.app/install.sh | bash" id="inst-sh" />
+              </Grid>
+            </Grid>
+          </Paper>
+        </Grid>
+
         {/* CLI Section */}
         <Grid item xs={12}>
           <Paper

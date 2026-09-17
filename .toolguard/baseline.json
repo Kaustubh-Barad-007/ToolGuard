@@ -1,8 +1,8 @@
 {
-  "baselineId": "bl-1789636317978-irgfoo",
+  "baselineId": "bl-1789666998222-8gl7rf",
   "projectId": "ToolGuard",
   "version": 1,
-  "createdAt": "2026-09-17T09:11:57.984Z",
+  "createdAt": "2026-09-17T17:43:18.227Z",
   "createdBy": "developer",
   "algorithm": "SHA-256",
   "tools": {
@@ -29,7 +29,7 @@
         "extra": {}
       },
       "fingerprint": "f49428a776611803fd50e93590f61a30ac9691a1b59effbb02c0579288857f8e",
-      "createdAt": "2026-09-17T09:11:57.981Z"
+      "createdAt": "2026-09-17T17:43:18.225Z"
     },
     "github": {
       "toolId": "github",
@@ -58,7 +58,7 @@
         "extra": {}
       },
       "fingerprint": "9b36a38a80ca44afe83092ba8599c037055e9447f0c9bcbf159553174291ec65",
-      "createdAt": "2026-09-17T09:11:57.983Z"
+      "createdAt": "2026-09-17T17:43:18.226Z"
     },
     "project-files": {
       "toolId": "project-files",
@@ -83,7 +83,7 @@
         "extra": {}
       },
       "fingerprint": "3e47a93dc3f696aa920cc1df7506e905ea4cf3fa90e8bd364abb57a3bcdd8eb9",
-      "createdAt": "2026-09-17T09:11:57.983Z"
+      "createdAt": "2026-09-17T17:43:18.226Z"
     },
     "terminal": {
       "toolId": "terminal",
@@ -108,7 +108,7 @@
         "extra": {}
       },
       "fingerprint": "c3f9d06b793fddf4c822653e290eaabe8b9da4750977b2efc650b83ee70abe2e",
-      "createdAt": "2026-09-17T09:11:57.983Z"
+      "createdAt": "2026-09-17T17:43:18.226Z"
     },
     "npm-build": {
       "toolId": "npm-build",
@@ -146,7 +146,82 @@
         "scriptName": "build",
         "rawCommand": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" run build"
       },
-      "createdAt": "2026-09-17T09:11:57.983Z"
+      "createdAt": "2026-09-17T17:43:18.226Z"
+    },
+    "npm-bundle:cli": {
+      "toolId": "npm-bundle:cli",
+      "name": "npm:bundle:cli",
+      "normalizedDefinition": {
+        "name": "npm:bundle:cli",
+        "description": "Package script \"bundle:cli\": node scripts/bundle-cli.js",
+        "version": "1.0.0",
+        "permissions": [
+          "execute",
+          "read"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": true,
+          "command": "node scripts/bundle-cli.js",
+          "isolated": false
+        },
+        "metadata": {
+          "rawCommand": "node scripts/bundle-cli.js",
+          "scriptName": "bundle:cli",
+          "sourceFile": "package.json"
+        },
+        "extra": {}
+      },
+      "fingerprint": "e94ff1a032b8c8daae9d68ddd3339535fbff097409c0a7e5cced95fd932d0d61",
+      "metadata": {
+        "sourceFile": "package.json",
+        "scriptName": "bundle:cli",
+        "rawCommand": "node scripts/bundle-cli.js"
+      },
+      "createdAt": "2026-09-17T17:43:18.226Z"
+    },
+    "npm-build:all": {
+      "toolId": "npm-build:all",
+      "name": "npm:build:all",
+      "normalizedDefinition": {
+        "name": "npm:build:all",
+        "description": "Package script \"build:all\": pnpm build && pnpm bundle:cli",
+        "version": "1.0.0",
+        "permissions": [
+          "execute",
+          "read",
+          "write"
+        ],
+        "endpoint": "local",
+        "inputSchema": {},
+        "outputSchema": {},
+        "authentication": {
+          "required": false
+        },
+        "execution": {
+          "enabled": true,
+          "command": "pnpm build && pnpm bundle:cli",
+          "isolated": false
+        },
+        "metadata": {
+          "rawCommand": "pnpm build && pnpm bundle:cli",
+          "scriptName": "build:all",
+          "sourceFile": "package.json"
+        },
+        "extra": {}
+      },
+      "fingerprint": "6a56625e3d0aef3d0a121f470337885fd0ff0479e07ca0e1376850718507dfa7",
+      "metadata": {
+        "sourceFile": "package.json",
+        "scriptName": "build:all",
+        "rawCommand": "pnpm build && pnpm bundle:cli"
+      },
+      "createdAt": "2026-09-17T17:43:18.226Z"
     },
     "npm-test": {
       "toolId": "npm-test",
@@ -183,7 +258,7 @@
         "scriptName": "test",
         "rawCommand": "vitest run"
       },
-      "createdAt": "2026-09-17T09:11:57.983Z"
+      "createdAt": "2026-09-17T17:43:18.226Z"
     },
     "npm-test:watch": {
       "toolId": "npm-test:watch",
@@ -220,7 +295,7 @@
         "scriptName": "test:watch",
         "rawCommand": "vitest"
       },
-      "createdAt": "2026-09-17T09:11:57.983Z"
+      "createdAt": "2026-09-17T17:43:18.226Z"
     },
     "npm-lint": {
       "toolId": "npm-lint",
@@ -257,7 +332,7 @@
         "scriptName": "lint",
         "rawCommand": "pnpm -r --parallel run lint"
       },
-      "createdAt": "2026-09-17T09:11:57.984Z"
+      "createdAt": "2026-09-17T17:43:18.227Z"
     },
     "npm-typecheck": {
       "toolId": "npm-typecheck",
@@ -294,7 +369,7 @@
         "scriptName": "typecheck",
         "rawCommand": "pnpm -r --parallel run typecheck"
       },
-      "createdAt": "2026-09-17T09:11:57.984Z"
+      "createdAt": "2026-09-17T17:43:18.227Z"
     },
     "npm-cli": {
       "toolId": "npm-cli",
@@ -331,7 +406,7 @@
         "scriptName": "cli",
         "rawCommand": "pnpm --filter @toolguard/cli dev"
       },
-      "createdAt": "2026-09-17T09:11:57.984Z"
+      "createdAt": "2026-09-17T17:43:18.227Z"
     },
     "npm-web:dev": {
       "toolId": "npm-web:dev",
@@ -368,7 +443,7 @@
         "scriptName": "web:dev",
         "rawCommand": "pnpm --filter @toolguard/web dev"
       },
-      "createdAt": "2026-09-17T09:11:57.984Z"
+      "createdAt": "2026-09-17T17:43:18.227Z"
     },
     "npm-web:build": {
       "toolId": "npm-web:build",
@@ -406,7 +481,7 @@
         "scriptName": "web:build",
         "rawCommand": "pnpm --filter @toolguard/web build"
       },
-      "createdAt": "2026-09-17T09:11:57.984Z"
+      "createdAt": "2026-09-17T17:43:18.227Z"
     },
     "ci-ci-yml": {
       "toolId": "ci-ci-yml",
@@ -441,8 +516,8 @@
         "sourceFile": ".github/workflows/ci.yml",
         "workflowName": "ToolGuard CI"
       },
-      "createdAt": "2026-09-17T09:11:57.984Z"
+      "createdAt": "2026-09-17T17:43:18.227Z"
     }
   },
-  "toolCount": 13
+  "toolCount": 15
 }

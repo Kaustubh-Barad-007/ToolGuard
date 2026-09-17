@@ -42,6 +42,8 @@ import LinkOffIcon from '@mui/icons-material/LinkOff';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import CheckIcon from '@mui/icons-material/Check';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useDemoData } from '../context/DemoDataContext';
 import { useThemeMode } from '../context/ThemeModeContext';
 
@@ -93,6 +95,22 @@ export const AppShell: React.FC = () => {
   const [importJsonText, setImportJsonText] = useState('');
   const [importProjectName, setImportProjectName] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
+
+  const [installModalOpen, setInstallModalOpen] = useState(false);
+  const [installTab, setInstallTab] = useState<'windows' | 'mac' | 'npm'>('windows');
+  const [copiedInstallCmd, setCopiedInstallCmd] = useState(false);
+
+  const installCommands = {
+    windows: 'irm https://toolguard-app.vercel.app/install.ps1 | iex',
+    mac: 'curl -fsSL https://toolguard-app.vercel.app/install.sh | bash',
+    npm: 'npm install -g https://toolguard-app.vercel.app/toolguard.tgz\ntoolguard quickstart'
+  };
+
+  const handleCopyInstallCmd = (cmd: string) => {
+    navigator.clipboard.writeText(cmd);
+    setCopiedInstallCmd(true);
+    setTimeout(() => setCopiedInstallCmd(false), 2000);
+  };
 
   const openDriftCount = driftEvents.filter(e => e.status === 'open').length;
 
@@ -383,6 +401,26 @@ export const AppShell: React.FC = () => {
             <Button
               size="small"
               variant="outlined"
+              onClick={() => setInstallModalOpen(true)}
+              startIcon={<TerminalOutlinedIcon sx={{ fontSize: '14px !important' }} />}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 650,
+                fontSize: '0.76rem',
+                borderRadius: '6px',
+                borderColor: borderCol,
+                color: textHeader,
+                py: 0.4,
+                px: 1.25,
+                '&:hover': { borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#CBD5E1' }
+              }}
+            >
+              Install CLI
+            </Button>
+
+            <Button
+              size="small"
+              variant="outlined"
               onClick={handleJudgeDemoClick}
               startIcon={<BoltIcon sx={{ fontSize: '14px !important' }} />}
               sx={{
@@ -595,6 +633,134 @@ export const AppShell: React.FC = () => {
             sx={{ textTransform: 'none', fontWeight: 650, borderRadius: '6px', fontSize: '0.82rem' }}
           >
             Import Baseline
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── INSTALL CLI DIALOG ────────────────────────────────────────────── */}
+      <Dialog
+        open={installModalOpen}
+        onClose={() => setInstallModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: sidebarBg,
+            border: `1px solid ${borderCol}`,
+            borderRadius: '12px',
+            p: 1
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 750, fontSize: '1.05rem', color: textHeader, pb: 1 }}>
+          Install ToolGuard CLI &amp; IDE Extension
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: textMuted, fontSize: '0.82rem', mb: 2 }}>
+            Run the 1-liner in your terminal. It automatically installs the CLI globally and configures your VS Code &amp; Cursor AI extensions in seconds.
+          </Typography>
+
+          <Box sx={{ display: 'flex', gap: 0.75, mb: 1.5, flexWrap: 'wrap' }}>
+            <Chip
+              label="Windows (1-Liner)"
+              size="small"
+              clickable
+              onClick={() => setInstallTab('windows')}
+              sx={{
+                height: 24,
+                fontSize: '0.72rem',
+                fontWeight: 650,
+                borderRadius: '6px',
+                backgroundColor: installTab === 'windows' ? (isDark ? 'rgba(0, 212, 170, 0.15)' : 'rgba(0, 139, 114, 0.12)') : 'transparent',
+                color: installTab === 'windows' ? (isDark ? '#00d4aa' : '#008b72') : textMuted,
+                border: `1px solid ${installTab === 'windows' ? (isDark ? '#00d4aa' : '#008b72') : borderCol}`,
+              }}
+            />
+            <Chip
+              label="macOS / Linux (1-Liner)"
+              size="small"
+              clickable
+              onClick={() => setInstallTab('mac')}
+              sx={{
+                height: 24,
+                fontSize: '0.72rem',
+                fontWeight: 650,
+                borderRadius: '6px',
+                backgroundColor: installTab === 'mac' ? (isDark ? 'rgba(0, 212, 170, 0.15)' : 'rgba(0, 139, 114, 0.12)') : 'transparent',
+                color: installTab === 'mac' ? (isDark ? '#00d4aa' : '#008b72') : textMuted,
+                border: `1px solid ${installTab === 'mac' ? (isDark ? '#00d4aa' : '#008b72') : borderCol}`,
+              }}
+            />
+            <Chip
+              label="Universal NPM"
+              size="small"
+              clickable
+              onClick={() => setInstallTab('npm')}
+              sx={{
+                height: 24,
+                fontSize: '0.72rem',
+                fontWeight: 650,
+                borderRadius: '6px',
+                backgroundColor: installTab === 'npm' ? (isDark ? 'rgba(0, 212, 170, 0.15)' : 'rgba(0, 139, 114, 0.12)') : 'transparent',
+                color: installTab === 'npm' ? (isDark ? '#00d4aa' : '#008b72') : textMuted,
+                border: `1px solid ${installTab === 'npm' ? (isDark ? '#00d4aa' : '#008b72') : borderCol}`,
+              }}
+            />
+          </Box>
+
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: isDark ? '#080c10' : '#f6f8fa',
+              border: `1px solid ${borderCol}`,
+              borderRadius: '8px',
+              p: 1.5,
+              mb: 2
+            }}
+          >
+            <Typography
+              component="code"
+              sx={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.8rem',
+                color: textHeader,
+                wordBreak: 'break-all',
+                flexGrow: 1
+              }}
+            >
+              {installCommands[installTab]}
+            </Typography>
+            <Tooltip title={copiedInstallCmd ? 'Copied!' : 'Copy to clipboard'}>
+              <IconButton
+                size="small"
+                onClick={() => handleCopyInstallCmd(installCommands[installTab])}
+                sx={{ ml: 1, color: copiedInstallCmd ? (isDark ? '#00d4aa' : '#008b72') : textMuted }}
+              >
+                {copiedInstallCmd ? <CheckIcon sx={{ fontSize: 16 }} /> : <ContentCopyIcon sx={{ fontSize: 16 }} />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+
+          <Typography sx={{ fontSize: '0.74rem', color: textMuted }}>
+            After installation, run <code>toolguard quickstart</code> in any repository to freeze your capability baseline and verify security in under 1 second.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setInstallModalOpen(false)}
+            sx={{ textTransform: 'none', color: textMuted, fontSize: '0.82rem' }}
+          >
+            Close
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => handleCopyInstallCmd(installCommands[installTab])}
+            startIcon={copiedInstallCmd ? <CheckIcon sx={{ fontSize: 14 }} /> : <ContentCopyIcon sx={{ fontSize: 14 }} />}
+            sx={{ textTransform: 'none', fontWeight: 650, borderRadius: '6px', fontSize: '0.82rem' }}
+          >
+            {copiedInstallCmd ? 'Copied!' : 'Copy Command'}
           </Button>
         </DialogActions>
       </Dialog>

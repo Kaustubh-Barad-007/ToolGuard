@@ -133,7 +133,8 @@ program
     const doScan = async (): Promise<ScanResult | null> => {
       const baseline = await FileBaselineStorage.loadLocalBaseline(cwd);
       if (!baseline) {
-        console.error('No trusted baseline found. Run `toolguard init` first.');
+        console.log('\n⚠️  No trusted baseline found in this workspace.');
+        console.log('Run `toolguard init -y` or `toolguard quickstart` to freeze baseline in <1 second.\n');
         return null;
       }
 
@@ -259,6 +260,43 @@ program
     } catch (err) {
       console.error('Scan execution error:', err);
       process.exit(2);
+    }
+  });
+
+// 2.5. COMMAND: quickstart
+program
+  .command('quickstart')
+  .description('One-command instant setup: discovers tools, freezes baseline, and verifies security')
+  .action(async () => {
+    const cwd = process.cwd();
+    console.log('\n⚡ ToolGuard Instant Quickstart\n──────────────────────────────');
+    let baseline = await FileBaselineStorage.loadLocalBaseline(cwd);
+    if (!baseline) {
+      console.log('1. Discovering capabilities and creating cryptographic baseline...');
+      const tools = await discoverWorkspaceTools(cwd);
+      baseline = BaselineManager.createBaseline(tools, path.basename(cwd));
+      await FileBaselineStorage.saveLocalBaseline(cwd, baseline);
+      console.log(`✓ Baseline frozen with ${baseline.toolCount} capability/tool definition(s).`);
+    } else {
+      console.log(`✓ Existing trusted baseline found (v${baseline.version}, ${baseline.toolCount} tools).`);
+    }
+
+    console.log('\n2. Verifying workspace security...');
+    const liveTools = await discoverWorkspaceTools(cwd);
+    const scanResult = BaselineManager.compare(liveTools, baseline);
+
+    for (const t of scanResult.tools) {
+      const symbol = t.status === 'SAFE' ? '✓' : '⚠';
+      const statusLabel = t.status === 'SAFE' ? 'unchanged' : 'changed';
+      console.log(`  ${symbol} ${t.name.padEnd(24)} ${statusLabel}`);
+    }
+
+    if (scanResult.driftCount === 0) {
+      console.log(`\n✅ Workspace is 100% verified and protected against capability drift!`);
+      console.log(`Run \`toolguard dashboard\` to open the web console.\n`);
+    } else {
+      console.log(`\n🚨 Unauthorized capability drift detected: ${scanResult.driftCount} tool(s) modified.`);
+      console.log(`Run \`toolguard dashboard\` to inspect visual diffs.\n`);
     }
   });
 

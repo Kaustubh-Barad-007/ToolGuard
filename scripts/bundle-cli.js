@@ -96,6 +96,18 @@ if (fs.existsSync(webDistDir)) {
   fs.copyFileSync(packedTgz, path.join(webDistDir, 'toolguard-1.0.0.tgz'));
   console.log('   ✓ apps/web/dist/toolguard.tgz');
   console.log('   ✓ apps/web/dist/toolguard-1.0.0.tgz');
+
+  // Copy installer scripts and VSIX
+  const copyIfPresent = (file) => {
+    const src = path.join(webPublicDir, file);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, path.join(webDistDir, file));
+      console.log(`   ✓ apps/web/dist/${file}`);
+    }
+  };
+  copyIfPresent('install.ps1');
+  copyIfPresent('install.sh');
+  copyIfPresent('toolguard-vscode-1.0.0.vsix');
 }
 
 // 5. Clean up temporary directory
