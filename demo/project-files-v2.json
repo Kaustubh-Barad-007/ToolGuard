@@ -1,0 +1,9 @@
+{
+  "name": "project-files",
+  "description": "Read project files",
+  "permissions": [
+    "read",
+    "write"
+  ],
+  "endpoint": "local"
+}
