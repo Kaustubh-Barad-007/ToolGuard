@@ -4,197 +4,111 @@ import {
   Typography,
   Paper,
   Grid,
-  TextField,
   FormControlLabel,
   Switch,
   Select,
   MenuItem,
   Button,
-  Alert
+  Alert,
+  Divider,
+  useTheme
 } from '@mui/material';
 import BoltIcon from '@mui/icons-material/Bolt';
 import { useDemoData } from '../context/DemoDataContext';
 
 export const SettingsPage: React.FC = () => {
-  const {
-    activeWorkspace,
-    isJudgeDemoActive,
-    loadJudgeDemo,
-    exitJudgeDemo,
-    resetToBaseline
-  } = useDemoData();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const { isJudgeDemoActive, loadJudgeDemo, exitJudgeDemo, resetToBaseline } = useDemoData();
 
-  const [scanFrequency, setScanFrequency] = useState('5');
   const [failOn, setFailOn] = useState('high');
+  const [scanFreq, setScanFreq] = useState('5');
   const [vscodeNotify, setVscodeNotify] = useState(true);
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
-  };
+  const handleSave = () => { setSaved(true); setTimeout(() => setSaved(false), 2500); };
+
+  const border  = isDark ? '#30363d' : '#d0d7de';
+  const surface = isDark ? '#161b22' : '#ffffff';
 
   return (
-    <Box sx={{ maxWidth: 800 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 750, color: 'text.primary', mb: 0.5 }}>
-          Settings & Policies
-        </Typography>
-        <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-          Configure scanning thresholds, automated CI gates, and notification alerts.
-        </Typography>
+    <Box sx={{ maxWidth: 680 }}>
+      <Box sx={{ mb: 2.5 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', letterSpacing: '-0.01em' }}>Settings</Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>Scan policy, notifications, and demo controls.</Typography>
       </Box>
 
-      {savedSuccess && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          Settings updated successfully.
-        </Alert>
-      )}
+      {saved && <Alert severity="success" sx={{ mb: 2, borderRadius: '8px' }}>Settings saved.</Alert>}
 
-      {/* Project Configuration */}
-      <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', mb: 2 }}>
-          Active Project Information
-        </Typography>
+      {/* Scan policy */}
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 2, borderRadius: '8px', backgroundColor: surface, borderColor: border }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mb: 2 }}>Scan & CI Policy</Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Project Name"
-              value={activeWorkspace ? activeWorkspace.name : 'No Project Active'}
-              disabled
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Stack Type"
-              value={activeWorkspace ? activeWorkspace.stack : 'None'}
-              disabled
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Scanning Policy */}
-      <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', mb: 2 }}>
-          Scanning & CI Enforcement Policy
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 650 }}>
-              CI FAILURE POLICY (--fail-on)
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>
+              CI FAIL THRESHOLD
             </Typography>
-            <Select
-              fullWidth
-              size="small"
-              value={failOn}
-              onChange={(e) => setFailOn(e.target.value)}
-            >
-              <MenuItem value="high">Fail only on HIGH RISK changes (Recommended)</MenuItem>
-              <MenuItem value="medium">Fail on MEDIUM & HIGH risk</MenuItem>
-              <MenuItem value="low">Fail on any detected change</MenuItem>
+            <Select fullWidth size="small" value={failOn} onChange={(e) => setFailOn(e.target.value)} sx={{ borderRadius: '6px' }}>
+              <MenuItem value="high">High risk only (recommended)</MenuItem>
+              <MenuItem value="medium">Medium & high risk</MenuItem>
+              <MenuItem value="low">Any detected change</MenuItem>
             </Select>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 650 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>
               BACKGROUND SCAN INTERVAL
             </Typography>
-            <Select
-              fullWidth
-              size="small"
-              value={scanFrequency}
-              onChange={(e) => setScanFrequency(e.target.value)}
-            >
+            <Select fullWidth size="small" value={scanFreq} onChange={(e) => setScanFreq(e.target.value)} sx={{ borderRadius: '6px' }}>
               <MenuItem value="1">Every 1 minute</MenuItem>
               <MenuItem value="5">Every 5 minutes</MenuItem>
               <MenuItem value="15">Every 15 minutes</MenuItem>
-              <MenuItem value="manual">Manual trigger only</MenuItem>
+              <MenuItem value="manual">Manual only</MenuItem>
             </Select>
           </Grid>
         </Grid>
       </Paper>
 
       {/* Notifications */}
-      <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', mb: 2 }}>
-          Notifications & Alerts
-        </Typography>
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 2, borderRadius: '8px', backgroundColor: surface, borderColor: border }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mb: 1.5 }}>Notifications</Typography>
         <FormControlLabel
-          control={<Switch checked={vscodeNotify} onChange={(e) => setVscodeNotify(e.target.checked)} />}
-          label="Display VS Code toast notification when capability drift is detected"
+          control={<Switch checked={vscodeNotify} onChange={(e) => setVscodeNotify(e.target.checked)} size="small" />}
+          label={<Typography variant="body2">VS Code status bar alert on capability drift</Typography>}
         />
-        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
-          Alerts developers non-intrusively in the editor status bar with a 1-click review action.
-        </Typography>
       </Paper>
 
-      {/* Hackathon Judge Demo Tour */}
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 3,
-          mb: 4,
-          borderRadius: 2,
-          border: '1px solid rgba(245, 158, 11, 0.35)',
-          backgroundColor: 'rgba(245, 158, 11, 0.04)'
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-          <BoltIcon sx={{ color: '#f59e0b', fontSize: 24 }} />
-          <Typography variant="h6" sx={{ fontWeight: 750, color: 'text.primary' }}>
-            Hackathon Judge Demo Tour
-          </Typography>
+      <Button variant="contained" onClick={handleSave} sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', px: 3, mb: 3, boxShadow: 'none' }}>
+        Save
+      </Button>
+
+      <Divider sx={{ borderColor: border, mb: 3 }} />
+
+      {/* Judge Demo */}
+      <Paper variant="outlined" sx={{ p: 2.5, borderRadius: '8px', backgroundColor: surface, borderColor: 'rgba(245,158,11,0.35)' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <BoltIcon sx={{ color: '#f59e0b', fontSize: 18 }} />
+          <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>Hackathon Judge Demo</Typography>
         </Box>
-        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2.5, lineHeight: 1.6 }}>
-          Experience a realistic capability expansion scenario in 1 click. Simulates unauthorized network egress and debug privileges on a production tool manifest.
+        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2, lineHeight: 1.6 }}>
+          Simulates an unauthorized capability expansion (network egress + debug privileges) on a production tool manifest in 1 click.
         </Typography>
-
-        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-          <Button
-            variant="contained"
-            startIcon={<BoltIcon />}
-            onClick={loadJudgeDemo}
-            sx={{
-              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-              color: '#fff',
-              fontWeight: 750,
-              textTransform: 'none',
-              '&:hover': { background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' }
-            }}
-          >
-            {isJudgeDemoActive ? 'Restart Judge Demo' : 'Launch Judge Demo'}
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button variant="contained" size="small" startIcon={<BoltIcon sx={{ fontSize: '14px !important' }} />} onClick={loadJudgeDemo}
+            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', background: '#f59e0b', boxShadow: 'none', color: '#fff', '&:hover': { background: '#d97706', boxShadow: 'none' } }}>
+            {isJudgeDemoActive ? 'Restart demo' : 'Launch demo'}
           </Button>
-
           {isJudgeDemoActive && (
-            <Button
-              variant="outlined"
-              color="inherit"
-              onClick={exitJudgeDemo}
-              sx={{ textTransform: 'none', fontWeight: 650 }}
-            >
-              Exit Judge Demo
+            <Button variant="outlined" size="small" onClick={exitJudgeDemo}
+              sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', borderColor: border, color: 'text.secondary' }}>
+              Exit demo
             </Button>
           )}
-
-          <Button
-            variant="outlined"
-            onClick={resetToBaseline}
-            sx={{ textTransform: 'none', color: 'text.secondary' }}
-          >
-            Reset Safe Baseline
+          <Button variant="outlined" size="small" onClick={resetToBaseline}
+            sx={{ textTransform: 'none', borderRadius: '6px', borderColor: border, color: 'text.secondary' }}>
+            Reset baseline
           </Button>
         </Box>
       </Paper>
-
-      <Button variant="contained" color="primary" onClick={handleSave} sx={{ px: 4, py: 1, fontWeight: 700 }}>
-        Save Preferences
-      </Button>
     </Box>
   );
 };
