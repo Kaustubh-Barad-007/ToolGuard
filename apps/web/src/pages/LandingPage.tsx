@@ -107,7 +107,7 @@ const THREAT_SCENARIOS: ThreatScenario[] = [
 ];
 
 // ── Scroll-reveal hook using IntersectionObserver ──────────────────────────────
-function useScrollReveal(threshold = 0.15) {
+function useScrollReveal(threshold = 0.15, rootMargin = '0px 0px -40px 0px') {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -121,14 +121,67 @@ function useScrollReveal(threshold = 0.15) {
           observer.unobserve(node);
         }
       },
-      { threshold }
+      { threshold, rootMargin }
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [threshold]);
+  }, [threshold, rootMargin]);
 
   return { ref, isVisible };
 }
+
+// ── Component-level Scroll-Reveal Wrapper ─────────────────────────────────────
+interface ScrollRevealBoxProps {
+  children: React.ReactNode;
+  delay?: number;
+  threshold?: number;
+  rootMargin?: string;
+  sx?: any;
+  className?: string;
+}
+
+const ScrollRevealBox: React.FC<ScrollRevealBoxProps> = ({
+  children,
+  delay = 0,
+  threshold = 0.12,
+  rootMargin = '0px 0px -60px 0px',
+  sx = {},
+  className = '',
+}) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(node);
+        }
+      },
+      { threshold, rootMargin }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [threshold, rootMargin]);
+
+  return (
+    <Box
+      ref={ref}
+      className={className}
+      sx={{
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? 'translateY(0) scale(1)' : 'translateY(40px) scale(0.92)',
+        transition: `opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 0.75s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,
+        ...sx,
+      }}
+    >
+      {children}
+    </Box>
+  );
+};
 
 // ── Animated counter hook ─────────────────────────────────────────────────────
 function useCountUp(target: number, duration: number, start: boolean) {
@@ -163,16 +216,9 @@ export const LandingPage: React.FC = () => {
   const [simulatedHash, setSimulatedHash] = useState('7f8a91b2c4e3d091');
   const [scanProgress, setScanProgress] = useState(100);
 
-  // Scroll-reveal refs for each section
-  const heroReveal = useScrollReveal(0.1);
-  const sentinelReveal = useScrollReveal(0.12);
-  const threatLabReveal = useScrollReveal(0.1);
-  const archReveal = useScrollReveal(0.1);
-  const quickStartReveal = useScrollReveal(0.15);
-  const ctaReveal = useScrollReveal(0.15);
-
-  // Stat counters
-  const statsReveal = useScrollReveal(0.2);
+  // Scroll-reveal refs for hero and stats
+  const heroReveal = useScrollReveal(0.01, '0px 0px 0px 0px');
+  const statsReveal = useScrollReveal(0.1, '0px 0px -40px 0px');
   const statTools = useCountUp(847, 1400, statsReveal.isVisible);
   const statRules = useCountUp(23, 1000, statsReveal.isVisible);
   const statLatency = useCountUp(8, 800, statsReveal.isVisible);
@@ -777,7 +823,6 @@ export const LandingPage: React.FC = () => {
               border: `1px solid ${accentPrimary}40`,
               mb: 4,
               boxShadow: `0 2px 12px ${accentPrimary}18`,
-              transition: 'all 0.25s',
               cursor: 'default',
               '&:hover': { transform: 'scale(1.03)', boxShadow: `0 4px 18px ${accentPrimary}28` },
               ...revealSx(heroReveal.isVisible, 0),
@@ -932,13 +977,9 @@ export const LandingPage: React.FC = () => {
       </Box>
 
       {/* ── 3. INTERACTIVE LIVE SENTINEL TERMINAL ─────────────────────────── */}
-      <Box ref={sentinelReveal.ref} id="live-sentinel">
+      <Box id="live-sentinel">
         <Container maxWidth="lg" sx={{ pb: { xs: 7, md: 10 } }}>
-          <Box sx={{
-            maxWidth: 960,
-            mx: 'auto',
-            ...revealSx(sentinelReveal.isVisible, 0),
-          }}>
+          <ScrollRevealBox threshold={0.1} rootMargin="0px 0px -50px 0px" sx={{ maxWidth: 960, mx: 'auto' }}>
             <Paper
               variant="outlined"
               sx={{
@@ -1136,7 +1177,7 @@ export const LandingPage: React.FC = () => {
                 </Box>
               </Box>
             </Paper>
-          </Box>
+          </ScrollRevealBox>
         </Container>
       </Box>
 
@@ -1174,12 +1215,9 @@ export const LandingPage: React.FC = () => {
       </Box>
 
       {/* ── 5. INTERACTIVE THREAT LAB ─────────────────────────────────────── */}
-      <Box ref={threatLabReveal.ref} id="threat-lab" sx={{ py: { xs: 9, md: 14 }, borderBottom: `1px solid ${borderSubtle}` }}>
+      <Box id="threat-lab" sx={{ py: { xs: 9, md: 14 }, borderBottom: `1px solid ${borderSubtle}` }}>
         <Container maxWidth="lg">
-          <Box sx={{
-            maxWidth: 700, mx: 'auto', textAlign: 'center', mb: 8,
-            ...revealSx(threatLabReveal.isVisible, 0),
-          }}>
+          <ScrollRevealBox sx={{ maxWidth: 700, mx: 'auto', textAlign: 'center', mb: 7 }}>
             <Typography variant="caption" sx={{ fontWeight: 800, color: accentViolet, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', mb: 1.5, fontSize: '0.74rem' }}>
               Interactive Threat Lab
             </Typography>
@@ -1189,13 +1227,10 @@ export const LandingPage: React.FC = () => {
             <Typography variant="body1" sx={{ color: textMuted, lineHeight: 1.7, fontSize: '1.05rem' }}>
               Select an exploit vector below to see how ToolGuard's explainable risk engine calculates severity and halts the process.
             </Typography>
-          </Box>
+          </ScrollRevealBox>
 
           {/* Scenario Selector Pills */}
-          <Box sx={{
-            display: 'flex', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap', mb: 5,
-            ...revealSx(threatLabReveal.isVisible, 100),
-          }}>
+          <ScrollRevealBox delay={80} sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap', mb: 5 }}>
             {THREAT_SCENARIOS.map(sc => (
               <Button
                 key={sc.id}
@@ -1221,10 +1256,10 @@ export const LandingPage: React.FC = () => {
                 {sc.title}
               </Button>
             ))}
-          </Box>
+          </ScrollRevealBox>
 
           {/* Interactive Threat Showcase Card */}
-          <Box sx={revealSx(threatLabReveal.isVisible, 200)}>
+          <ScrollRevealBox delay={120}>
             <Paper
               variant="outlined"
               sx={{
@@ -1332,17 +1367,14 @@ export const LandingPage: React.FC = () => {
                 </Grid>
               </Grid>
             </Paper>
-          </Box>
+          </ScrollRevealBox>
         </Container>
       </Box>
 
       {/* ── 6. ARCHITECTURE BENTO GRID ─────────────────────────────────────── */}
-      <Box ref={archReveal.ref} id="matrix" sx={{ py: { xs: 9, md: 14 }, borderBottom: `1px solid ${borderSubtle}` }}>
+      <Box id="matrix" sx={{ py: { xs: 9, md: 14 }, borderBottom: `1px solid ${borderSubtle}` }}>
         <Container maxWidth="lg">
-          <Box sx={{
-            maxWidth: 700, mx: 'auto', textAlign: 'center', mb: 9,
-            ...revealSx(archReveal.isVisible, 0),
-          }}>
+          <ScrollRevealBox sx={{ maxWidth: 700, mx: 'auto', textAlign: 'center', mb: 9 }}>
             <Typography variant="caption" sx={{ fontWeight: 800, color: accentPrimary, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', mb: 1.5, fontSize: '0.74rem' }}>
               Security Architecture
             </Typography>
@@ -1352,12 +1384,12 @@ export const LandingPage: React.FC = () => {
             <Typography variant="body1" sx={{ color: textMuted, lineHeight: 1.7, fontSize: '1.05rem' }}>
               Five interlocking cryptographic layers that turn your workstation into a self-defending zero-trust fortress.
             </Typography>
-          </Box>
+          </ScrollRevealBox>
 
           <Grid container spacing={3}>
             {/* Bento 1: Auto Discovery */}
             <Grid item xs={12} md={7}>
-              <Box sx={revealSx(archReveal.isVisible, 100)}>
+              <ScrollRevealBox delay={0} sx={{ height: '100%' }}>
                 <Paper
                   className="reveal-card"
                   variant="outlined"
@@ -1397,12 +1429,12 @@ export const LandingPage: React.FC = () => {
                     ))}
                   </Box>
                 </Paper>
-              </Box>
+              </ScrollRevealBox>
             </Grid>
 
             {/* Bento 2: SHA-256 Hashing */}
             <Grid item xs={12} md={5}>
-              <Box sx={revealSx(archReveal.isVisible, 200)}>
+              <ScrollRevealBox delay={120} sx={{ height: '100%' }}>
                 <Paper
                   className="reveal-card"
                   variant="outlined"
@@ -1442,12 +1474,12 @@ export const LandingPage: React.FC = () => {
                     hash: 9f8a3...31b2 [Deterministic]
                   </Box>
                 </Paper>
-              </Box>
+              </ScrollRevealBox>
             </Grid>
 
             {/* Bento 3: Explainable Risk Rules */}
             <Grid item xs={12} md={4}>
-              <Box sx={revealSx(archReveal.isVisible, 300)}>
+              <ScrollRevealBox delay={0} sx={{ height: '100%' }}>
                 <Paper
                   className="reveal-card"
                   variant="outlined"
@@ -1474,12 +1506,12 @@ export const LandingPage: React.FC = () => {
                     No black-box guesses. Rule-based evaluation flags exact privilege escalations with impact explanations in plain English.
                   </Typography>
                 </Paper>
-              </Box>
+              </ScrollRevealBox>
             </Grid>
 
             {/* Bento 4: Git Pre-Commit Gates */}
             <Grid item xs={12} md={4}>
-              <Box sx={revealSx(archReveal.isVisible, 400)}>
+              <ScrollRevealBox delay={100} sx={{ height: '100%' }}>
                 <Paper
                   className="reveal-card"
                   variant="outlined"
@@ -1506,12 +1538,12 @@ export const LandingPage: React.FC = () => {
                     Blocks untrusted code before it enters your repository. Integrates automatically with <code>.git/hooks/pre-commit</code>.
                   </Typography>
                 </Paper>
-              </Box>
+              </ScrollRevealBox>
             </Grid>
 
             {/* Bento 5: 100% Local-First */}
             <Grid item xs={12} md={4}>
-              <Box sx={revealSx(archReveal.isVisible, 500)}>
+              <ScrollRevealBox delay={200} sx={{ height: '100%' }}>
                 <Paper
                   className="reveal-card"
                   variant="outlined"
@@ -1538,19 +1570,16 @@ export const LandingPage: React.FC = () => {
                     Nothing leaves your computer. No user tracking, no code uploaded to foreign clouds, and full offline functionality.
                   </Typography>
                 </Paper>
-              </Box>
+              </ScrollRevealBox>
             </Grid>
           </Grid>
         </Container>
       </Box>
 
       {/* ── 7. QUICK START TERMINAL ────────────────────────────────────────── */}
-      <Box ref={quickStartReveal.ref} id="quick-start" sx={{ py: { xs: 9, md: 13 }, borderBottom: `1px solid ${borderSubtle}` }}>
+      <Box id="quick-start" sx={{ py: { xs: 9, md: 13 }, borderBottom: `1px solid ${borderSubtle}` }}>
         <Container maxWidth="md">
-          <Box sx={{
-            textAlign: 'center', mb: 6,
-            ...revealSx(quickStartReveal.isVisible, 0),
-          }}>
+          <ScrollRevealBox sx={{ textAlign: 'center', mb: 6 }}>
             <Typography variant="h4" sx={{ fontWeight: 850, letterSpacing: '-0.03em', mb: 2 }}>
               Ready to Guard Your Tools in{' '}
               <Box component="span" sx={{ color: accentPrimary }}>30 Seconds</Box>?
@@ -1558,13 +1587,10 @@ export const LandingPage: React.FC = () => {
             <Typography variant="body2" sx={{ color: textMuted, fontSize: '1rem' }}>
               Choose your preferred integration mode below and run the command.
             </Typography>
-          </Box>
+          </ScrollRevealBox>
 
           {/* Terminal Tabs — with sliding indicator */}
-          <Box sx={{
-            display: 'flex', justifyContent: 'center', gap: 0.75, mb: 3,
-            ...revealSx(quickStartReveal.isVisible, 100),
-          }}>
+          <ScrollRevealBox delay={80} sx={{ display: 'flex', justifyContent: 'center', gap: 0.75, mb: 3 }}>
             <Box sx={{
               display: 'inline-flex',
               p: 0.5,
@@ -1603,10 +1629,10 @@ export const LandingPage: React.FC = () => {
                 </Button>
               ))}
             </Box>
-          </Box>
+          </ScrollRevealBox>
 
           {/* Interactive Terminal Card */}
-          <Box sx={revealSx(quickStartReveal.isVisible, 200)}>
+          <ScrollRevealBox delay={140}>
             <Paper
               variant="outlined"
               sx={{
@@ -1659,14 +1685,14 @@ export const LandingPage: React.FC = () => {
                 </IconButton>
               </Tooltip>
             </Paper>
-          </Box>
+          </ScrollRevealBox>
         </Container>
       </Box>
 
       {/* ── 8. CALL TO ACTION BANNER ───────────────────────────────────────── */}
-      <Box ref={ctaReveal.ref}>
+      <Box>
         <Container maxWidth="lg" sx={{ py: { xs: 9, md: 13 } }}>
-          <Box sx={revealSx(ctaReveal.isVisible, 0)}>
+          <ScrollRevealBox>
             <Paper
               variant="outlined"
               sx={{
@@ -1753,7 +1779,7 @@ export const LandingPage: React.FC = () => {
                 </Button>
               </Box>
             </Paper>
-          </Box>
+          </ScrollRevealBox>
         </Container>
       </Box>
 
