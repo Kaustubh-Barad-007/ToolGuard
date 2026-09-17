@@ -1,0 +1,23 @@
+{
+  "name": "toolguard-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ToolGuard - Developer Tool Trust Drift Detection System",
+  "scripts": {
+    "build": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "pnpm -r --parallel run lint",
+    "typecheck": "pnpm -r --parallel run typecheck",
+    "cli": "pnpm --filter @toolguard/cli dev",
+    "web:dev": "pnpm --filter @toolguard/web dev",
+    "web:build": "pnpm --filter @toolguard/web build"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
