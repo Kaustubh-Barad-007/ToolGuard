@@ -454,6 +454,17 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Disconnect active project to return to clean zero state
   const disconnectProject = () => {
+    if (activeWorkspaceId) {
+      setWorkspaces(prev => {
+        const next = prev.filter(w => w.id !== activeWorkspaceId);
+        try {
+          localStorage.setItem('toolguard_workspaces', JSON.stringify(next));
+        } catch {
+          // Ignore
+        }
+        return next;
+      });
+    }
     setActiveWorkspaceId(null);
     setTools([]);
     setBaseline(EMPTY_BASELINE);

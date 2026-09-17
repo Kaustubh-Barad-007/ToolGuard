@@ -54,6 +54,7 @@ export const DashboardPage: React.FC = () => {
     simulateDrift,
     resetToBaseline,
     deleteTool,
+    disconnectProject,
   } = useDemoData();
 
   const [scanning, setScanning] = useState(false);
@@ -62,6 +63,7 @@ export const DashboardPage: React.FC = () => {
   const [selectedPermission, setSelectedPermission] = useState<string>('all');
   const [showGuide, setShowGuide] = useState(false);
   const [toolToDelete, setToolToDelete] = useState<ToolScanStatus | null>(null);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
   const openDrift = driftEvents.filter(e => e.status === 'open');
   const isProtected = openDrift.length === 0;
@@ -204,6 +206,25 @@ export const DashboardPage: React.FC = () => {
               </Button>
             </>
           )}
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setConfirmDisconnect(true)}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '6px',
+              fontSize: '0.82rem',
+              borderColor: 'rgba(244,63,94,0.3)',
+              color: '#f43f5e',
+              '&:hover': {
+                borderColor: '#f43f5e',
+                backgroundColor: 'rgba(244,63,94,0.06)'
+              }
+            }}
+          >
+            Disconnect Project
+          </Button>
         </Box>
       </Box>
 
@@ -469,6 +490,54 @@ export const DashboardPage: React.FC = () => {
             sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px', px: 2 }}
           >
             Delete Tool
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmation Dialog for Disconnecting / Deleting Project */}
+      <Dialog
+        open={confirmDisconnect}
+        onClose={() => setConfirmDisconnect(false)}
+        PaperProps={{
+          sx: {
+            backgroundColor: surface,
+            borderColor: border,
+            borderWidth: 1,
+            borderStyle: 'solid',
+            borderRadius: '10px',
+            maxWidth: 440,
+            p: 1
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 750, fontSize: '1.05rem', color: 'text.primary', pb: 1 }}>
+          Completely Disconnect Project?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: 'text.secondary', fontSize: '0.86rem', lineHeight: 1.6 }}>
+            Are you sure you want to completely disconnect <strong>{activeWorkspace?.name}</strong> from ToolGuard?
+            This will remove the project from ToolGuard and reset it to an unmonitored zero state.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setConfirmDisconnect(false)}
+            size="small"
+            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            size="small"
+            onClick={() => {
+              setConfirmDisconnect(false);
+              disconnectProject();
+            }}
+            sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px', px: 2 }}
+          >
+            Disconnect &amp; Remove
           </Button>
         </DialogActions>
       </Dialog>

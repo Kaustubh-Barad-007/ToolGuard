@@ -435,7 +435,8 @@ program
 program
   .command('disconnect')
   .alias('reset')
-  .description('Disconnect ToolGuard from the current workspace and delete protection baselines')
+  .alias('purge')
+  .description('Completely disconnect ToolGuard from the current workspace and purge all protection baselines and hooks')
   .action(async () => {
     const cwd = process.cwd();
     const toolguardDir = path.join(cwd, '.toolguard');
@@ -443,16 +444,51 @@ program
     console.log('\n🛡 ToolGuard Disconnect\n─────────────────────────');
 
     try {
+      // 1. Stop daemon if running
+      const pidFile = path.join(toolguardDir, 'daemon.pid');
+      try {
+        const pidStr = await fs.readFile(pidFile, 'utf8').catch(() => null);
+        if (pidStr) {
+          const pid = parseInt(pidStr.trim(), 10);
+          try { process.kill(pid, 'SIGTERM'); } catch {}
+        }
+      } catch {}
+
+      // 2. Remove .toolguard/ directory
       const exists = await fs.stat(toolguardDir).catch(() => null);
-      if (!exists) {
+      if (exists) {
+        await fs.rm(toolguardDir, { recursive: true, force: true });
+        console.log('✓ Successfully removed .toolguard/ directory and all cryptographic baselines.');
+      } else {
         console.log('No .toolguard configuration found in this workspace.');
-        console.log('Workspace is already disconnected.\n');
-        return;
       }
 
-      await fs.rm(toolguardDir, { recursive: true, force: true });
-      console.log('✓ Successfully removed .toolguard/ directory and all cryptographic baselines.');
-      console.log('✓ Workspace is now disconnected and unprotected.\n');
+      // 3. Clean up Git pre-commit hook if created by ToolGuard
+      const preCommitPath = path.join(cwd, '.git', 'hooks', 'pre-commit');
+      try {
+        const hookContent = await fs.readFile(preCommitPath, 'utf8').catch(() => '');
+        if (hookContent.includes('ToolGuard')) {
+          await fs.unlink(preCommitPath).catch(() => {});
+          console.log('✓ Cleaned up ToolGuard Git pre-commit hook.');
+        }
+      } catch {}
+
+      // 4. Clean up .vscode/settings.json if toolguard setting exists
+      const settingsPath = path.join(cwd, '.vscode', 'settings.json');
+      try {
+        const settings = JSON.parse(await fs.readFile(settingsPath, 'utf8'));
+        if (settings['toolguard.scanOnSave'] !== undefined) {
+          delete settings['toolguard.scanOnSave'];
+          if (Object.keys(settings).length === 0) {
+            await fs.unlink(settingsPath).catch(() => {});
+          } else {
+            await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+          }
+          console.log('✓ Cleaned up .vscode/settings.json.');
+        }
+      } catch {}
+
+      console.log('✓ Workspace is now completely disconnected and unmonitored.\n');
       console.log('To reconnect at any time: run `toolguard init -y`\n');
     } catch (err: any) {
       console.error(`Failed to disconnect: ${err.message}`);
@@ -696,7 +732,7 @@ program
       const displayName = baseline.tools[matchingKey].name;
       delete baseline.tools[matchingKey];
       baseline.toolCount = Object.keys(baseline.tools).length;
-      baseline.updatedAt = new Date().toISOString();
+      baseline.version += 1;
       await FileBaselineStorage.saveLocalBaseline(cwd, baseline);
       console.log(`\n✓ Completely deleted tool "${displayName}" from workspace.`);
       console.log(`✓ Recalculated SHA-256 cryptographic baseline (${baseline.toolCount} tool(s) remaining).\n`);
