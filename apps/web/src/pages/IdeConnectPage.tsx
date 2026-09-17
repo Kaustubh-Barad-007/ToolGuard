@@ -12,6 +12,7 @@ import {
   Tabs,
   Tab,
   Divider,
+  Chip,
   useTheme
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -29,17 +30,17 @@ const VSIX_URL  = 'https://toolguard-app.vercel.app/toolguard-vscode-1.0.0.vsix'
 const TGZ_URL   = 'https://toolguard-app.vercel.app/toolguard.tgz';
 
 const CLI_STEPS = [
-  { label: 'Step 1 — Install globally',          cmd: `npm install -g ${TGZ_URL}`,    note: 'Bundles all dependencies. Works on Windows, macOS, Linux.' },
-  { label: 'Step 2 — Init baseline',              cmd: 'toolguard init -y',             note: 'Run inside your project folder.' },
-  { label: 'Step 3 — Scan anytime',              cmd: 'toolguard scan',                note: 'Verifies tools against the SHA-256 baseline.' },
-  { label: 'Step 4 — Disconnect / reset',         cmd: 'toolguard disconnect',          note: 'Deletes .toolguard/ and purges all hashes.' },
+  { label: 'Step 1 — Global Installation', cmd: `npm install -g ${TGZ_URL}`, note: 'Bundles all dependencies. Works on Windows, macOS, and Linux.' },
+  { label: 'Step 2 — Initialize Baseline', cmd: 'toolguard init -y', note: 'Runs in your project folder to discover and freeze tools into SHA-256 hashes.' },
+  { label: 'Step 3 — Run Verification', cmd: 'toolguard scan', note: 'Verifies active capabilities against your local cryptographic baseline.' },
+  { label: 'Step 4 — Reset / Disconnect', cmd: 'toolguard disconnect', note: 'Purges .toolguard/ directory and unlinks the local project.' },
 ];
 
 const IDE_TABS = [
-  { label: 'VS Code',        cmd: `curl.exe -LO ${VSIX_URL}; code --install-extension toolguard-vscode-1.0.0.vsix`,     note: 'PowerShell' },
-  { label: 'Cursor',         cmd: `curl.exe -LO ${VSIX_URL}; cursor --install-extension toolguard-vscode-1.0.0.vsix`,   note: 'PowerShell' },
-  { label: 'Windsurf',       cmd: `curl.exe -LO ${VSIX_URL}; windsurf --install-extension toolguard-vscode-1.0.0.vsix`, note: 'PowerShell' },
-  { label: 'Mac / Linux',    cmd: `curl -LO ${VSIX_URL} && code --install-extension toolguard-vscode-1.0.0.vsix`,       note: 'Bash' },
+  { label: 'VS Code', cmd: `curl.exe -LO ${VSIX_URL}; code --install-extension toolguard-vscode-1.0.0.vsix`, note: 'Windows PowerShell' },
+  { label: 'Cursor AI', cmd: `curl.exe -LO ${VSIX_URL}; cursor --install-extension toolguard-vscode-1.0.0.vsix`, note: 'Windows PowerShell' },
+  { label: 'Windsurf', cmd: `curl.exe -LO ${VSIX_URL}; windsurf --install-extension toolguard-vscode-1.0.0.vsix`, note: 'Windows PowerShell' },
+  { label: 'Mac / Linux', cmd: `curl -LO ${VSIX_URL} && code --install-extension toolguard-vscode-1.0.0.vsix`, note: 'Bash / Zsh' },
 ];
 
 export const IdeConnectPage: React.FC = () => {
@@ -48,16 +49,20 @@ export const IdeConnectPage: React.FC = () => {
   const navigate = useNavigate();
   const { importWorkspaceBaseline, loadJudgeDemo } = useDemoData();
 
-  const [copiedKey, setCopiedKey]     = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeIdeTab, setActiveIdeTab] = useState(0);
-  const [jsonText, setJsonText]       = useState('');
+  const [jsonText, setJsonText] = useState('');
   const [projectName, setProjectName] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
 
-  const border  = isDark ? '#1f2937' : '#e2e8f0';
-  const surface = isDark ? '#111827' : '#ffffff';
-  const codeBg  = isDark ? '#0b0f19' : '#f8fafc';
+  const border        = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(210, 218, 235, 0.85)';
+  const surface       = isDark ? '#0D1220' : '#ffffff';
+  const surfaceMuted  = isDark ? '#080B14' : '#F7F8FC';
+  const accentPrimary = isDark ? '#00D4AA' : '#008B72';
+  const accentViolet  = isDark ? '#7C5CFC' : '#5B3FD4';
+  const warningColor  = isDark ? '#FFB340' : '#CC8A1E';
+  const textMuted     = isDark ? '#6B7A99' : '#5A6578';
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -66,9 +71,18 @@ export const IdeConnectPage: React.FC = () => {
   };
 
   const CopyBtn = ({ text, id }: { text: string; id: string }) => (
-    <Tooltip title={copiedKey === id ? 'Copied!' : 'Copy'}>
-      <IconButton size="small" onClick={() => copy(text, id)} sx={{ ml: 1, color: copiedKey === id ? '#059669' : 'text.disabled', '&:hover': { color: 'text.primary' } }}>
-        {copiedKey === id ? <CheckIcon sx={{ fontSize: 15, color: '#059669' }} /> : <ContentCopyIcon sx={{ fontSize: 15 }} />}
+    <Tooltip title={copiedKey === id ? 'Copied to clipboard!' : 'Copy command'}>
+      <IconButton
+        size="small"
+        onClick={() => copy(text, id)}
+        sx={{
+          ml: 1,
+          color: copiedKey === id ? accentPrimary : textMuted,
+          transition: 'all 0.2s',
+          '&:hover': { color: 'text.primary', transform: 'scale(1.1)' }
+        }}
+      >
+        {copiedKey === id ? <CheckIcon sx={{ fontSize: 16, color: accentPrimary }} /> : <ContentCopyIcon sx={{ fontSize: 16 }} />}
       </IconButton>
     </Tooltip>
   );
@@ -77,16 +91,16 @@ export const IdeConnectPage: React.FC = () => {
     <Box sx={{
       display: 'flex',
       alignItems: 'center',
-      backgroundColor: isDark ? '#0b0f19' : '#f8fafc',
+      backgroundColor: surfaceMuted,
       border: `1px solid ${border}`,
-      borderRadius: '8px',
-      px: 1.5,
-      py: 1,
+      borderRadius: '10px',
+      px: 1.75,
+      py: 1.1,
       fontFamily: '"JetBrains Mono", monospace',
-      fontSize: '0.8rem',
-      color: isDark ? '#60a5fa' : '#0284c7'
+      fontSize: '0.82rem',
+      color: isDark ? '#7C5CFC' : '#5B3FD4'
     }}>
-      <code style={{ flex: 1, wordBreak: 'break-all', fontFamily: 'inherit' }}>{text}</code>
+      <code style={{ flex: 1, wordBreak: 'break-all', fontFamily: 'inherit', fontWeight: 650 }}>{text}</code>
       <CopyBtn text={text} id={id} />
     </Box>
   );
@@ -102,80 +116,167 @@ export const IdeConnectPage: React.FC = () => {
         const parsed = JSON.parse(content.replace(/^\uFEFF/, '').trim());
         if (parsed.projectId && !projectName) setProjectName(parsed.projectId);
         setImportError(null);
-      } catch { setImportError('Invalid JSON file.'); }
+      } catch {
+        setImportError('Invalid JSON file format.');
+      }
     };
     reader.readAsText(file);
   };
 
   const handleImport = () => {
     setImportError(null);
-    if (!jsonText.trim()) { setImportError('Paste or upload your baseline.json.'); return; }
+    if (!jsonText.trim()) { setImportError('Paste or upload a valid baseline.json.'); return; }
     try {
       const parsed = JSON.parse(jsonText.replace(/^\uFEFF/, '').trim());
       const ok = importWorkspaceBaseline(parsed, projectName.trim() || undefined);
-      if (ok) { setImportSuccess(true); setTimeout(() => navigate('/dashboard'), 800); }
-      else     { setImportError('Invalid baseline format. Must contain a "tools" object.'); }
-    } catch { setImportError('Invalid JSON syntax.'); }
+      if (ok) {
+        setImportSuccess(true);
+        setTimeout(() => navigate('/dashboard'), 800);
+      } else {
+        setImportError('Invalid baseline format. Must contain a valid "tools" object.');
+      }
+    } catch {
+      setImportError('Invalid JSON syntax.');
+    }
   };
 
   return (
-    <Box sx={{ maxWidth: 960, mx: 'auto' }}>
-      {/* Header */}
+    <Box sx={{ maxWidth: 1040, mx: 'auto' }}>
+      {/* ── HEADER ───────────────────────────────────────────────────────────── */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3.5, flexWrap: 'wrap', gap: 2 }}>
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.025em', mb: 0.5 }}>
-            Install &amp; Connect — Any IDE
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Zero-friction local setup · works across VS Code, Cursor, Windsurf, JetBrains, and universal CLI.
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.75 }}>
+            <Typography variant="h5" sx={{ fontWeight: 850, color: 'text.primary', letterSpacing: '-0.03em' }}>
+              Connect Any IDE or Command Line
+            </Typography>
+            <Chip
+              label="UNIVERSAL ZERO-TRUST"
+              size="small"
+              sx={{
+                height: 24,
+                fontSize: '0.67rem',
+                fontWeight: 800,
+                backgroundColor: `${accentPrimary}15`,
+                color: accentPrimary,
+                border: `1px solid ${accentPrimary}35`,
+                borderRadius: '7px'
+              }}
+            />
+          </Box>
+          <Typography variant="body2" sx={{ color: textMuted, fontWeight: 500 }}>
+            Zero-friction local setup · Native integration across VS Code, Cursor AI, Windsurf Editor, JetBrains, and terminal CLI.
           </Typography>
         </Box>
-        <Button variant="contained" size="small" startIcon={<BoltIcon sx={{ fontSize: '14px !important' }} />}
+
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<BoltIcon sx={{ fontSize: '15px !important' }} />}
           onClick={() => { loadJudgeDemo(); navigate('/drift'); }}
-          sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)', color: '#fff', px: 2, py: 0.7, '&:hover': { background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' } }}>
+          sx={{
+            textTransform: 'none',
+            fontWeight: 750,
+            borderRadius: '8px',
+            background: 'linear-gradient(135deg, #FFB340 0%, #D97706 100%)',
+            boxShadow: '0 3px 12px rgba(217, 119, 6, 0.35)',
+            color: '#fff',
+            px: 2,
+            py: 0.75,
+            '&:hover': {
+              background: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 5px 16px rgba(217, 119, 6, 0.45)',
+            }
+          }}
+        >
           ⚡ Launch Demo
         </Button>
       </Box>
 
       <Grid container spacing={3}>
-        {/* ── Card 1: Universal CLI ── */}
+        {/* ── CARD 1: UNIVERSAL CLI ──────────────────────────────────────────── */}
         <Grid item xs={12}>
-          <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', backgroundColor: surface, borderColor: border, boxShadow: isDark ? 'none' : '0 1px 3px rgba(15,23,42,0.03), 0 6px 18px -3px rgba(15,23,42,0.04)' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-              <Box sx={{ width: 34, height: 34, borderRadius: '9px', backgroundColor: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <TerminalIcon sx={{ fontSize: 19, color: '#059669' }} />
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 3.5,
+              borderRadius: '16px',
+              backgroundColor: surface,
+              borderColor: border,
+              boxShadow: isDark ? '0 12px 32px rgba(0,0,0,0.45)' : '0 6px 20px rgba(13,17,23,0.05)'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+              <Box sx={{
+                width: 42,
+                height: 42,
+                borderRadius: '11px',
+                backgroundColor: `${accentPrimary}15`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: `0 4px 12px ${accentPrimary}20`
+              }}>
+                <TerminalIcon sx={{ fontSize: 22, color: accentPrimary }} />
               </Box>
               <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary', fontSize: '0.95rem' }}>
-                  1. Universal CLI — Terminal, JetBrains, Neovim, Sublime
+                <Typography variant="subtitle1" sx={{ fontWeight: 850, color: 'text.primary', letterSpacing: '-0.02em' }}>
+                  1. Universal CLI — Terminal, Makefiles, CI/CD, JetBrains &amp; Neovim
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>Standalone binary, all dependencies bundled, Windows · macOS · Linux</Typography>
+                <Typography variant="caption" sx={{ color: textMuted }}>
+                  Standalone binary with all dependencies bundled · Windows, macOS, and Linux
+                </Typography>
               </Box>
             </Box>
-            <Grid container spacing={2}>
+
+            <Grid container spacing={2.5}>
               {CLI_STEPS.map((step, i) => (
                 <Grid item xs={12} sm={6} key={i}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5, letterSpacing: '0.02em' }}>{step.label}</Typography>
+                  <Typography variant="caption" sx={{ color: textMuted, fontWeight: 800, display: 'block', mb: 0.75, letterSpacing: '0.04em', fontSize: '0.72rem' }}>
+                    {step.label.toUpperCase()}
+                  </Typography>
                   <CodeBlock text={step.cmd} id={`cli-${i}`} />
-                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5, fontSize: '0.72rem' }}>{step.note}</Typography>
+                  <Typography variant="caption" sx={{ color: textMuted, display: 'block', mt: 0.75, fontSize: '0.75rem' }}>
+                    {step.note}
+                  </Typography>
                 </Grid>
               ))}
             </Grid>
           </Paper>
         </Grid>
 
-        {/* ── Card 2: IDE Extension ── */}
+        {/* ── CARD 2: IDE EXTENSION ─────────────────────────────────────────── */}
         <Grid item xs={12}>
-          <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', backgroundColor: surface, borderColor: border, boxShadow: isDark ? 'none' : '0 1px 3px rgba(15,23,42,0.03), 0 6px 18px -3px rgba(15,23,42,0.04)' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-              <Box sx={{ width: 34, height: 34, borderRadius: '9px', backgroundColor: 'rgba(79, 70, 229, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CodeIcon sx={{ fontSize: 19, color: '#4f46e5' }} />
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 3.5,
+              borderRadius: '16px',
+              backgroundColor: surface,
+              borderColor: border,
+              boxShadow: isDark ? '0 12px 32px rgba(0,0,0,0.45)' : '0 6px 20px rgba(13,17,23,0.05)'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+              <Box sx={{
+                width: 42,
+                height: 42,
+                borderRadius: '11px',
+                backgroundColor: `${accentViolet}15`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: `0 4px 12px ${accentViolet}20`
+              }}>
+                <CodeIcon sx={{ fontSize: 22, color: accentViolet }} />
               </Box>
               <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary', fontSize: '0.95rem' }}>
-                  2. VS Code / Cursor / Windsurf — 1-Line Download &amp; Install
+                <Typography variant="subtitle1" sx={{ fontWeight: 850, color: 'text.primary', letterSpacing: '-0.02em' }}>
+                  2. VS Code, Cursor AI &amp; Windsurf — Direct Extension Install
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>Downloads VSIX directly from production, no marketplace setup needed</Typography>
+                <Typography variant="caption" sx={{ color: textMuted }}>
+                  Installs verified production VSIX package with live status bar telemetry
+                </Typography>
               </Box>
             </Box>
 
@@ -184,69 +285,174 @@ export const IdeConnectPage: React.FC = () => {
               onChange={(_, v) => setActiveIdeTab(v)}
               sx={{
                 borderBottom: `1px solid ${border}`,
-                mb: 2,
-                minHeight: 36,
-                '& .MuiTab-root': { minHeight: 36, fontSize: '0.82rem', textTransform: 'none', fontWeight: 650, py: 0.5, color: 'text.secondary', '&.Mui-selected': { color: isDark ? '#10b981' : '#059669', fontWeight: 750 } },
-                '& .MuiTabs-indicator': { backgroundColor: isDark ? '#10b981' : '#059669', height: 2.5, borderRadius: 1 }
+                mb: 2.5,
+                minHeight: 40,
+                '& .MuiTab-root': {
+                  minHeight: 40,
+                  fontSize: '0.84rem',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  py: 0.75,
+                  px: 2,
+                  color: textMuted,
+                  '&.Mui-selected': { color: accentPrimary, fontWeight: 800 }
+                },
+                '& .MuiTabs-indicator': { backgroundColor: accentPrimary, height: 2.5, borderRadius: 1 }
               }}
             >
               {IDE_TABS.map((t, i) => <Tab key={i} label={t.label} />)}
             </Tabs>
 
             <CodeBlock text={IDE_TABS[activeIdeTab].cmd} id={`ide-${activeIdeTab}`} />
-            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1, fontWeight: 500 }}>
-              {IDE_TABS[activeIdeTab].note} · shows 🛡 ToolGuard ✓ in status bar when baseline matches
+            <Typography variant="caption" sx={{ color: textMuted, display: 'block', mt: 1.25, fontWeight: 600, fontSize: '0.78rem' }}>
+              Platform: <strong>{IDE_TABS[activeIdeTab].note}</strong> · Displays 🛡 <em>ToolGuard ✓</em> in bottom status bar when cryptographic baseline matches.
             </Typography>
 
-            <Box sx={{ mt: 2.5 }}>
-              <Button variant="outlined" size="small" startIcon={<DownloadIcon sx={{ fontSize: '15px !important' }} />} href={VSIX_URL} download
-                sx={{ textTransform: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 650, borderColor: border, color: 'text.primary', '&:hover': { borderColor: '#cbd5e1' } }}>
-                Download VSIX directly
+            <Box sx={{ mt: 3 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<DownloadIcon sx={{ fontSize: '16px !important' }} />}
+                href={VSIX_URL}
+                download
+                sx={{
+                  textTransform: 'none',
+                  borderRadius: '9px',
+                  fontSize: '0.84rem',
+                  fontWeight: 750,
+                  borderColor: border,
+                  color: 'text.primary',
+                  px: 2.2,
+                  py: 0.8,
+                  '&:hover': { borderColor: accentPrimary }
+                }}
+              >
+                Download VSIX Package Directly
               </Button>
             </Box>
           </Paper>
         </Grid>
 
-        {/* ── Card 3: Web Dashboard ── */}
+        {/* ── CARD 3: WEB DASHBOARD / MANUAL BASELINE ───────────────────────── */}
         <Grid item xs={12}>
-          <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', backgroundColor: surface, borderColor: border, boxShadow: isDark ? 'none' : '0 1px 3px rgba(15,23,42,0.03), 0 6px 18px -3px rgba(15,23,42,0.04)' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-              <Box sx={{ width: 34, height: 34, borderRadius: '9px', backgroundColor: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <HubOutlinedIcon sx={{ fontSize: 19, color: '#2563eb' }} />
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 3.5,
+              borderRadius: '16px',
+              backgroundColor: surface,
+              borderColor: border,
+              boxShadow: isDark ? '0 12px 32px rgba(0,0,0,0.45)' : '0 6px 20px rgba(13,17,23,0.05)'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+              <Box sx={{
+                width: 42,
+                height: 42,
+                borderRadius: '11px',
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)'
+              }}>
+                <HubOutlinedIcon sx={{ fontSize: 22, color: '#3B82F6' }} />
               </Box>
               <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary', fontSize: '0.95rem' }}>
-                  3. Web Dashboard — Drag &amp; Drop Connect
+                <Typography variant="subtitle1" sx={{ fontWeight: 850, color: 'text.primary', letterSpacing: '-0.02em' }}>
+                  3. Browser Console — Manual Drag &amp; Drop Baseline Sync
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Import <code>.toolguard/baseline.json</code> directly to monitor in browser
+                <Typography variant="caption" sx={{ color: textMuted }}>
+                  Import your project's <code>.toolguard/baseline.json</code> directly for instant monitoring
                 </Typography>
               </Box>
             </Box>
 
-            <Divider sx={{ borderColor: border, mb: 2.5 }} />
+            <Divider sx={{ borderColor: border, mb: 3 }} />
 
-            {importError  && <Alert severity="error"   sx={{ mb: 2, borderRadius: '8px' }}>{importError}</Alert>}
-            {importSuccess && <Alert severity="success" sx={{ mb: 2, borderRadius: '8px' }}>Loaded! Redirecting…</Alert>}
+            {importError && (
+              <Alert severity="error" sx={{ mb: 2.5, borderRadius: '10px', fontWeight: 600 }}>
+                {importError}
+              </Alert>
+            )}
+            {importSuccess && (
+              <Alert severity="success" sx={{ mb: 2.5, borderRadius: '10px', fontWeight: 600 }}>
+                Baseline loaded! Redirecting to Security Console…
+              </Alert>
+            )}
 
-            <Grid container spacing={2.5}>
+            <Grid container spacing={3}>
               <Grid item xs={12} sm={4}>
-                <TextField fullWidth size="small" label="Project name (optional)" placeholder="e.g. my-backend"
-                  value={projectName} onChange={(e) => setProjectName(e.target.value)} sx={{ mb: 2, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }} />
-                <Button variant="outlined" component="label" startIcon={<FileUploadOutlinedIcon />} fullWidth size="small"
-                  sx={{ textTransform: 'none', borderRadius: '8px', borderColor: border, color: 'text.primary', fontWeight: 650, py: 1 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Project Identifier (optional)"
+                  placeholder="e.g. backend-api"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  sx={{
+                    mb: 2.5,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '9px',
+                      backgroundColor: surfaceMuted,
+                      '& fieldset': { borderColor: border }
+                    }
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<FileUploadOutlinedIcon />}
+                  fullWidth
+                  size="small"
+                  sx={{
+                    textTransform: 'none',
+                    borderRadius: '9px',
+                    borderColor: border,
+                    color: 'text.primary',
+                    fontWeight: 750,
+                    py: 1.1,
+                    '&:hover': { borderColor: accentPrimary }
+                  }}
+                >
                   Upload baseline.json
                   <input type="file" accept=".json" hidden onChange={handleFileUpload} />
                 </Button>
               </Grid>
+
               <Grid item xs={12} sm={8}>
-                <TextField multiline rows={4} fullWidth size="small"
+                <TextField
+                  multiline
+                  rows={4}
+                  fullWidth
+                  size="small"
                   placeholder='Paste baseline JSON: { "baselineId": "...", "tools": { ... } }'
-                  value={jsonText} onChange={(e) => setJsonText(e.target.value)}
-                  sx={{ mb: 2, fontFamily: '"JetBrains Mono", monospace', '& .MuiOutlinedInput-root': { borderRadius: '8px', fontSize: '0.8rem' } }} />
-                <Button variant="contained" onClick={handleImport} disabled={importSuccess || !jsonText.trim()}
-                  sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px', px: 2.5, py: 0.8 }}>
-                  Load &amp; Protect
+                  value={jsonText}
+                  onChange={(e) => setJsonText(e.target.value)}
+                  sx={{
+                    mb: 2.5,
+                    '& .MuiInputBase-root': {
+                      fontFamily: '"JetBrains Mono", monospace',
+                      borderRadius: '9px',
+                      fontSize: '0.82rem',
+                      backgroundColor: surfaceMuted,
+                      '& fieldset': { borderColor: border }
+                    }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleImport}
+                  disabled={importSuccess || !jsonText.trim()}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 750,
+                    borderRadius: '9px',
+                    px: 3,
+                    py: 1
+                  }}
+                >
+                  Load &amp; Protect Workspace
                 </Button>
               </Grid>
             </Grid>
