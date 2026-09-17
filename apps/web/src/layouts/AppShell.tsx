@@ -42,7 +42,6 @@ import LinkOffIcon from '@mui/icons-material/LinkOff';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import CheckIcon from '@mui/icons-material/Check';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
-import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import { useDemoData } from '../context/DemoDataContext';
 import { useThemeMode } from '../context/ThemeModeContext';
 
@@ -61,12 +60,6 @@ const NAV_GROUPS = [
     items: [
       { label: 'IDE & CLI', path: '/integrations', icon: <HubOutlinedIcon sx={{ fontSize: 18 }} /> },
       { label: 'Rules & Policies', path: '/settings', icon: <SettingsOutlinedIcon sx={{ fontSize: 18 }} /> },
-    ]
-  },
-  {
-    title: 'NAVIGATION',
-    items: [
-      { label: 'Go to Main', path: '/', icon: <ArrowBackOutlinedIcon sx={{ fontSize: 18 }} /> },
     ]
   }
 ];
@@ -164,7 +157,7 @@ export const AppShell: React.FC = () => {
       {/* Brand & Workspace Switcher Header */}
       <Box sx={{ p: 2, borderBottom: `1px solid ${borderCol}` }}>
         <Box
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/dashboard')}
           sx={{ display: 'flex', alignItems: 'center', gap: 1.25, cursor: 'pointer', mb: 2 }}
         >
           <Box
@@ -254,7 +247,7 @@ export const AppShell: React.FC = () => {
             </Typography>
             <List disablePadding>
               {group.items.map((item) => {
-                const isSelected = location.pathname === item.path;
+                const isSelected = location.pathname === item.path || (item.path === '/dashboard' && location.pathname === '/');
                 return (
                   <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
                     <ListItemButton
