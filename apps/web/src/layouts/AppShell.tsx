@@ -42,6 +42,7 @@ import LinkOffIcon from '@mui/icons-material/LinkOff';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import CheckIcon from '@mui/icons-material/Check';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import { useDemoData } from '../context/DemoDataContext';
 import { useThemeMode } from '../context/ThemeModeContext';
 
@@ -60,6 +61,12 @@ const NAV_GROUPS = [
     items: [
       { label: 'IDE & CLI', path: '/integrations', icon: <HubOutlinedIcon sx={{ fontSize: 18 }} /> },
       { label: 'Rules & Policies', path: '/settings', icon: <SettingsOutlinedIcon sx={{ fontSize: 18 }} /> },
+    ]
+  },
+  {
+    title: 'NAVIGATION',
+    items: [
+      { label: 'Go to Main', path: '/', icon: <ArrowBackOutlinedIcon sx={{ fontSize: 18 }} /> },
     ]
   }
 ];
@@ -234,7 +241,7 @@ export const AppShell: React.FC = () => {
       {/* Navigation Links by Group */}
       <Box sx={{ px: 1.5, py: 2, flexGrow: 1, overflowY: 'auto' }}>
         {NAV_GROUPS.map((group, gIdx) => (
-          <Box key={group.title} sx={{ mb: gIdx === 0 ? 3 : 0 }}>
+          <Box key={group.title} sx={{ mb: gIdx < NAV_GROUPS.length - 1 ? 2.5 : 0 }}>
             <Typography sx={{
               fontSize: '0.68rem',
               fontWeight: 700,
