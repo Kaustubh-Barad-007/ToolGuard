@@ -1,0 +1,24 @@
+{
+  "name": "@toolguard/cli",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Command line interface for ToolGuard trust drift security engine",
+  "main": "./dist/index.js",
+  "bin": {
+    "toolguard": "./bin/toolguard.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "dev": "node ./bin/toolguard.js"
+  },
+  "dependencies": {
+    "@toolguard/core": "workspace:*",
+    "@toolguard/shared": "workspace:*",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "typescript": "^5.4.5"
+  }
+}
