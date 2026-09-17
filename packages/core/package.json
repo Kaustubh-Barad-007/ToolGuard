@@ -1,0 +1,35 @@
+{
+  "name": "@toolguard/core",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Core security and trust drift detection engine for ToolGuard",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js",
+      "default": "./dist/node.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@toolguard/shared": "workspace:*",
+    "fast-json-stable-stringify": "^2.1.0",
+    "js-sha256": "^0.11.0"
+  },
+  "devDependencies": {
+    "@types/fast-json-stable-stringify": "^2.0.0",
+    "@types/node": "^20.12.12",
+    "typescript": "^5.4.5"
+  }
+}
