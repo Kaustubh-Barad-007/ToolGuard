@@ -1,192 +1,213 @@
-# ToolGuard
+# 🛡️ ToolGuard
+
+<div align="center">
 
 > **"You trusted the tool. Did the tool stay the same?"**
 
-ToolGuard is a cybersecurity developer tool designed to detect **trust drift** in developer and AI tool definitions.
+[![CI](https://github.com/Kaustubh-Barad-007/ToolGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaustubh-Barad-007/ToolGuard/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
+[![Production Dashboard](https://img.shields.io/badge/Production-toolguard--app.vercel.app-blue.svg)](https://toolguard-app.vercel.app)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-green.svg)](https://nodejs.org)
+[![Zero-Trust](https://img.shields.io/badge/Security-SHA--256%20Zero--Trust-10b981.svg)](https://toolguard-app.vercel.app)
 
-Modern AI agents and development environments rely heavily on external tool definitions, Model Context Protocol (MCP) servers, and plugin manifests. When you initially install or configure a tool, you review and trust its authorized capabilities. Over time, updates, configuration changes, or supply-chain drift can silently expand tool capabilities—introducing write permissions, shell execution, or remote endpoints without explicit consent.
+**Zero-Trust Capability Verification & Automated Trust Drift Detection for Developer Tools & AI Agents**
 
-ToolGuard acts as **Git for tool trust**: it freezes your verified tool definitions into a trusted baseline and alerts you the moment any capability shifts.
+[Production Web Dashboard](https://toolguard-app.vercel.app) · [Report Issue](https://github.com/Kaustubh-Barad-007/ToolGuard/issues) · [Security Policy](SECURITY.md)
 
----
-
-## Key Features
-
-- **Deterministic Fingerprinting**: Canonical JSON serialization and SHA-256 digests ensure tamper-evident baselines.
-- **Rule-Based Explainable Risk**: Zero black-box scoring. Every alert reports the exact changed property, risk severity, and a human-readable "Why This Matters" security justification.
-- **Side-by-Side Diff Viewer**: Inspect property-level changes directly in the web dashboard or CLI.
-- **Native VS Code Extension**: Status bar indicator (`🛡 ToolGuard ✓` / `ToolGuard !`), command palette shortcuts, and non-intrusive drift alerts.
-- **Developer CLI**: Full terminal support for local scanning (`toolguard scan`) and CI/CD pipelines (`toolguard scan --ci --fail-on high`).
-- **Privacy by Design**: Zero source code uploaded; sensitive credential properties (`apiKey`, `password`, `token`) are automatically redacted with `[REDACTED]`.
-- **Audit Timeline**: Immutable chronological ledger tracking every baseline creation, scan, and accepted change.
+</div>
 
 ---
 
-## Architecture
+## 📌 Why ToolGuard?
+
+Modern development environments and AI coding agents rely heavily on external tool definitions, Model Context Protocol (MCP) servers, npm build scripts, and plugin manifests. When you initially configure a tool, you review and trust its permissions.
+
+Over time, dependencies update, configurations change, or supply-chain drift silently expands tool capabilities—granting unintended **network egress**, **arbitrary shell execution**, or **broad filesystem read/write privileges**.
+
+**ToolGuard acts as Git for tool trust**:
+1. **Discovers** tool manifests and developer script capabilities across your workspace.
+2. **Freezes** them into a tamper-proof cryptographic baseline using deterministic SHA-256 fingerprinting.
+3. **Monitors** and alerts you the instant any capability, endpoint, or permission drifts from the baseline.
+
+---
+
+## 💻 Exact Commands to Install & Connect Across ANY IDE
+
+### 1. Universal CLI (Works for Any Editor: JetBrains, Neovim, Sublime, Terminal)
+
+```bash
+# Step 1: Install globally (1-line standalone binary, bundled dependencies)
+npm install -g https://toolguard-app.vercel.app/toolguard.tgz
+
+# Step 2: Initialize & freeze tool capabilities in your project folder
+cd /path/to/your/project
+toolguard init -y
+
+# Step 3: Verify tools anytime against the SHA-256 baseline
+toolguard scan
+
+# Step 4: Disconnect / Purge baseline anytime
+toolguard disconnect
+```
+
+### 2. VS Code, Cursor & Windsurf (1-Line Download & Install)
+
+Run the single line corresponding to your editor in PowerShell (or Bash) to download the package directly from production and install it:
+
+#### VS Code (PowerShell):
+```powershell
+curl.exe -LO https://toolguard-app.vercel.app/toolguard-vscode-1.0.0.vsix; code --install-extension toolguard-vscode-1.0.0.vsix
+```
+
+#### Cursor (PowerShell):
+```powershell
+curl.exe -LO https://toolguard-app.vercel.app/toolguard-vscode-1.0.0.vsix; cursor --install-extension toolguard-vscode-1.0.0.vsix
+```
+
+#### Windsurf (PowerShell):
+```powershell
+curl.exe -LO https://toolguard-app.vercel.app/toolguard-vscode-1.0.0.vsix; windsurf --install-extension toolguard-vscode-1.0.0.vsix
+```
+
+#### macOS / Linux (Bash):
+```bash
+curl -LO https://toolguard-app.vercel.app/toolguard-vscode-1.0.0.vsix && code --install-extension toolguard-vscode-1.0.0.vsix
+```
+
+> **Editor Status Bar Indicator**:
+> - `🛡 ToolGuard ✓` — All workspace tools strictly match the trusted baseline.
+> - `🛡 ToolGuard ⚠ DRIFT` — Immediate notification with 1-click inspection whenever unauthorized capability alterations occur.
+
+### 3. Web Dashboard (Connect & Disconnect Online)
+
+Live Dashboard: **[https://toolguard-app.vercel.app](https://toolguard-app.vercel.app)**
+
+- **To Connect**: Drag and drop your project's `.toolguard/baseline.json` directly onto the dashboard.
+- **To Disconnect**: Click the red **Disconnect** button in the top project banner to reset to a clean zero-project state.
+
+---
+
+## 🏛️ Architecture
+
+ToolGuard operates with a **pure local-first, zero-telemetry architecture**. No source code or private tokens ever leave your workstation.
 
 ```mermaid
 flowchart TD
-    subgraph IDE [Developer Environment]
-        VSCode[VS Code Extension]
-        CLI[ToolGuard CLI]
-        Tools[Tool Manifests & MCP Servers]
+    subgraph DevWorkspace [Developer Workstation / IDE]
+        Manifests["Tool Manifests & MCP Configs<br/>(package.json, tasks.json, mcp.json)"]
+        CLI["ToolGuard CLI<br/>(toolguard init / scan / status)"]
+        VSCodeExt["VS Code / Cursor Extension<br/>(Real-Time Status Bar Guard)"]
     end
 
-    subgraph Core [ToolGuard Core Security Engine]
-        Disc[Discovery Adapters]
-        Norm[Deterministic Normalizer]
-        FP[SHA-256 Hasher]
-        Diff[Deep Differ]
-        Risk[Rule-Based Risk Engine]
-        Redact[Secret Redaction]
+    subgraph SecurityEngine [ToolGuard Security Core]
+        Discovery["Discovery Adapters"]
+        Normalizer["Deterministic Canonical JSON Normalizer"]
+        Hasher["SHA-256 Cryptographic Hasher"]
+        Differ["Property-Level Deep Differ"]
+        RiskEngine["Explainable Rule-Based Risk Engine"]
+        Redaction["Sensitive Credential Redaction"]
     end
 
-    subgraph Backend [Firebase Cloud Backend]
-        Auth[Firebase Auth]
-        Firestore[(Cloud Firestore)]
-        Rules[Strict Security Rules]
-        Func[Cloud Functions]
+    subgraph Storage [Local Workspace Storage]
+        BaselineFile[".toolguard/baseline.json<br/>(Cryptographic Baseline)"]
     end
 
-    subgraph Web [Developer Dashboard]
-        ReactApp[React 18 + Vite + MUI]
-        DiffUI[Side-by-Side Diff Viewer]
-        TimelineUI[Audit Timeline]
+    subgraph Dashboard [ToolGuard Production Web UI]
+        WebUI["Web Dashboard<br/>(https://toolguard-app.vercel.app)"]
+        DiffUI["Interactive Side-by-Side Diff Viewer"]
     end
 
-    Tools --> Disc
-    Disc --> Norm
-    Norm --> Redact
-    Redact --> FP
-    FP --> Diff
-    Diff --> Risk
-    Risk --> VSCode
-    Risk --> CLI
-    Risk --> Func
-    Func --> Firestore
-    Firestore --> Rules
-    Firestore --> ReactApp
+    Manifests --> Discovery
+    Discovery --> Normalizer
+    Normalizer --> Redaction
+    Redaction --> Hasher
+    Hasher --> BaselineFile
+    BaselineFile --> Differ
+    Hasher --> Differ
+    Differ --> RiskEngine
+    RiskEngine --> CLI
+    RiskEngine --> VSCodeExt
+    BaselineFile -.->|Drag & Drop Import| WebUI
+    WebUI --> DiffUI
 ```
 
 ---
 
-## Monorepo Layout
+## 📦 Monorepo Structure
 
 ```text
 ToolGuard/
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # Automated GitHub Actions CI & Verification Gate
 ├── apps/
-│   ├── web/                    # React 18 + Vite + Material UI (MUI) Dashboard
-│   └── vscode-extension/       # VS Code Extension with Status Bar & Diff QuickPick
+│   ├── vscode-extension/      # Extension for VS Code, Cursor & Windsurf
+│   └── web/                   # Modern React 18 + Vite + MUI Dashboard
 ├── packages/
-│   ├── shared/                 # Shared types, Zod schemas, constants
-│   ├── core/                   # Pure security engine (normalization, diff, risk rules)
-│   └── cli/                    # CLI executable (init, scan, status, baseline, explain)
-├── functions/                  # Firebase Cloud Functions (v2)
-├── firebase/                   # firestore.rules, firestore.indexes.json, firebase.json
-├── demo/                       # Deterministic judge demo test fixtures
-└── tests/                      # Vitest unit & integration test suite
+│   ├── shared/                # Shared TypeScript types, schemas & constants
+│   ├── core/                  # Core cryptographic hashing, normalizer & risk rules
+│   └── cli/                   # Standalone terminal CLI executable
+├── tests/                     # Vitest test suite (13/13 passing)
+├── demo/                      # Deterministic evaluation test fixtures
+├── scripts/                   # Local build helper scripts
+├── package.json
+├── pnpm-workspace.yaml
+├── tsconfig.json
+├── LICENSE                    # MIT License
+├── CONTRIBUTING.md
+├── SECURITY.md
+└── README.md
 ```
 
 ---
 
-## Quick Start
+## ⚡ 60-Second Evaluation Demo (Hackathon Judge Flow)
 
-### 1. Install Dependencies
+You can verify ToolGuard end-to-end in 60 seconds:
+
+### Online (1-Click)
+1. Open **[https://toolguard-app.vercel.app](https://toolguard-app.vercel.app)**.
+2. Click the **⚡ Try Demo (1-Click)** button in the top bar.
+3. Observe the immediate **Trust Drift Alert**: an unauthorized capability expansion (network egress & debug privileges) simulated on `npm:dev`.
+4. Click **Inspect Raw Diff** to view the interactive side-by-side JSON comparison.
+5. Click **Accept & Freeze New Baseline** to update the baseline hash and return to a protected status.
+
+### In Terminal
 ```bash
-pnpm install
-```
+# 1. Initialize baseline
+toolguard init -y
 
-### 2. Build the Monorepo
-```bash
-pnpm build
-```
+# 2. Run scan — verifies safe baseline
+toolguard scan
 
-### 3. Run Unit & Integration Tests
-```bash
-pnpm test
-```
-
-### 4. Start the Web Dashboard
-```bash
-pnpm web:dev
-```
-Open `http://localhost:5173` to explore the dashboard. For hackathon evaluation, the application includes a **Judge Demo Scenario** with pre-configured tools displaying real-time drift detection.
-
----
-
-## CLI Usage
-
-```bash
-# Initialize ToolGuard in your workspace and create baseline
-pnpm --filter @toolguard/cli dev init
-
-# Run security scan against baseline
-pnpm --filter @toolguard/cli dev scan
-
-# Inspect protection status
-pnpm --filter @toolguard/cli dev status
-
-# Explain drift and security implications for a specific tool
-pnpm --filter @toolguard/cli dev explain project-files
-
-# Open the web dashboard
-pnpm --filter @toolguard/cli dev dashboard
-
-# Run in CI/CD pipeline (fails build if high risk drift is detected)
-pnpm --filter @toolguard/cli dev scan --ci --fail-on high
+# 3. Simulate drift (e.g. modify package.json or .toolguard/tools/filesystem.json)
+# 4. Re-scan — immediate drift detection with risk explanation
+toolguard scan
 ```
 
 ---
 
-## VS Code Extension
+## 🛡️ CI/CD Enforcement Gate
 
-1. Build the extension:
-   ```bash
-   cd apps/vscode-extension
-   pnpm run build
-   ```
-2. Press `F5` in VS Code to launch the Extension Development Host.
-3. Observe the status bar item: `🛡 ToolGuard ✓`.
-4. Run commands via the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
-   - `ToolGuard: Scan Project`
-   - `ToolGuard: Create Trusted Baseline`
-   - `ToolGuard: View Trust Drift`
-   - `ToolGuard: Explain Drift`
-   - `ToolGuard: Open Dashboard`
+Integrate ToolGuard directly into your GitHub Actions pipeline to block pull requests that silently expand tool capabilities:
+
+```yaml
+- name: Verify Tool Capabilities
+  run: |
+    npm install -g https://toolguard-app.vercel.app/toolguard.tgz
+    toolguard scan --ci --fail-on high
+```
 
 ---
 
-## Deterministic Demo Scenario (Judge Flow)
+## 🔒 Privacy & Security Principles
 
-You can demonstrate ToolGuard end-to-end in 60 seconds:
-
-1. Copy baseline tool `demo/project-files-v1.json` to `.toolguard/tools/project-files.json` (`read` only).
-2. Run `toolguard scan` → Shows `✓ All monitored tools match trusted baseline. (SAFE)`.
-3. Copy drifted tool `demo/project-files-v2.json` to `.toolguard/tools/project-files.json` (`read` + `write`).
-4. Run `toolguard scan` →
-   ```text
-   Trust drift detected.
-
-   project-files
-     permissions: ["read"] → ["read", "write"]
-     Risk: HIGH RISK
-
-   Run:
-     toolguard explain project-files
-   ```
-5. Run `toolguard explain project-files` → Outputs detailed explanation of write elevation risks.
-6. Open Web Dashboard (`/tools/project-files`) → Inspect side-by-side diff, click `[Accept Change]`, and verify the new baseline version and audit trail.
+- **Zero-Telemetry**: ToolGuard does not transmit source code, files, or telemetry to external servers.
+- **Automatic Redaction**: Sensitive authorization headers and credentials (`apiKey`, `password`, `token`, `secret`) are masked with `[REDACTED]` prior to hashing.
+- **Deterministic**: Tool normalizer sorts object keys and normalizes line endings, preventing false drift alerts caused by formatting differences.
 
 ---
 
-## Security & Limitations
+## 📄 License
 
-ToolGuard is purpose-built to detect unauthorized or unexpected modifications to trusted tool configurations.
-- It does not guarantee that a baseline tool is inherently free of vulnerabilities.
-- It does not replace runtime process sandboxing or code review.
-- It provides transparent, explainable alerts so developers can make informed decisions before running altered tools.
-
----
-
-## License
-MIT License
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
