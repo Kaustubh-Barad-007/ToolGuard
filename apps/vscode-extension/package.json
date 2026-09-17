@@ -1,0 +1,93 @@
+{
+  "name": "toolguard-vscode",
+  "displayName": "ToolGuard",
+  "description": "You trusted the tool. Did the tool stay the same? Trust drift detection for developer and AI tools.",
+  "version": "1.0.0",
+  "publisher": "toolguard",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Security",
+    "Linters",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "workspaceContains:.toolguard/baseline.json",
+    "workspaceContains:.cursor/mcp.json",
+    "workspaceContains:toolguard-tools.json",
+    "onStartupFinished"
+  ],
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --watch",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@toolguard/core": "workspace:*",
+    "@toolguard/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.4.5"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "toolguard.scan",
+        "title": "ToolGuard: Scan Project",
+        "category": "ToolGuard"
+      },
+      {
+        "command": "toolguard.createBaseline",
+        "title": "ToolGuard: Create Trusted Baseline",
+        "category": "ToolGuard"
+      },
+      {
+        "command": "toolguard.viewDrift",
+        "title": "ToolGuard: View Trust Drift",
+        "category": "ToolGuard"
+      },
+      {
+        "command": "toolguard.openDashboard",
+        "title": "ToolGuard: Open Dashboard",
+        "category": "ToolGuard"
+      },
+      {
+        "command": "toolguard.showStatus",
+        "title": "ToolGuard: Show Tool Status",
+        "category": "ToolGuard"
+      },
+      {
+        "command": "toolguard.explainDrift",
+        "title": "ToolGuard: Explain Drift",
+        "category": "ToolGuard"
+      },
+      {
+        "command": "toolguard.refreshTools",
+        "title": "ToolGuard: Refresh Tools",
+        "category": "ToolGuard"
+      }
+    ],
+    "configuration": {
+      "title": "ToolGuard",
+      "properties": {
+        "toolguard.dashboardUrl": {
+          "type": "string",
+          "default": "https://toolguard-app.vercel.app",
+          "description": "URL of the ToolGuard Web Dashboard"
+        },
+        "toolguard.scanOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically run ToolGuard scan when tool configuration files are saved"
+        }
+      }
+    }
+  }
+}
