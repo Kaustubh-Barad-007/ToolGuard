@@ -5,6 +5,8 @@
   "description": "ToolGuard - Developer Tool Trust Drift Detection System",
   "scripts": {
     "build": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" run build",
+    "bundle:cli": "node scripts/bundle-cli.js",
+    "build:all": "pnpm build && pnpm bundle:cli",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "pnpm -r --parallel run lint",
@@ -14,6 +16,7 @@
     "web:build": "pnpm --filter @toolguard/web build"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
   },

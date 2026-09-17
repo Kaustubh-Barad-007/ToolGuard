@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "dev": "node ./bin/toolguard.js"
   },

@@ -25,7 +25,6 @@ interface DemoContextType {
   driftEvents: DriftEvent[];
   auditLogs: AuditEvent[];
   lastScanTime: string;
-  isSyncingFirestore: boolean;
   workspaces: WorkspaceProfile[];
   activeWorkspaceId: string | null;
   activeWorkspace: WorkspaceProfile | null;
@@ -42,8 +41,6 @@ interface DemoContextType {
   createNewBaseline: () => Promise<void>;
   simulateDrift: () => Promise<void>;
   resetToBaseline: () => Promise<void>;
-  simulateDriftInFirestore: () => Promise<void>;
-  resetToBaselineInFirestore: () => Promise<void>;
   resetDemoData: () => void;
   isDemoMode: boolean;
   setIsDemoMode: (val: boolean) => void;
@@ -169,7 +166,6 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
   const [auditLogs, setAuditLogs] = useState<AuditEvent[]>([]);
   const [lastScanTime, setLastScanTime] = useState<string>('Just now');
-  const [isSyncingFirestore, setIsSyncingFirestore] = useState<boolean>(false);
 
   // Sync tools and baseline when active workspace changes
   useEffect(() => {
@@ -598,7 +594,6 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         driftEvents,
         auditLogs,
         lastScanTime,
-        isSyncingFirestore,
         workspaces,
         activeWorkspaceId,
         activeWorkspace,
@@ -615,8 +610,6 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         createNewBaseline,
         simulateDrift,
         resetToBaseline,
-        simulateDriftInFirestore: simulateDrift,
-        resetToBaselineInFirestore: resetToBaseline,
         resetDemoData,
         isDemoMode: isJudgeDemoActive,
         setIsDemoMode: (val) => val ? loadJudgeDemo() : exitJudgeDemo()

@@ -14,7 +14,9 @@ dist/
 
 # Logs & temp
 *.log
+*.pid
 deploy-progress.log
+temp_pack/
 
 # Scratch & backup
 scratch-cli.js

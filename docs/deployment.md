@@ -1,52 +1,61 @@
-# ToolGuard Deployment Guide
+# ToolGuard Deployment & Distribution Guide
 
-## 1. Web Dashboard (Vercel)
+ToolGuard is a 100% local-first security platform. The Web Dashboard is deployed as a static Single Page Application (SPA) on Vercel, serving both the web UI and binary distribution assets.
 
-The Web Dashboard in `apps/web` can be deployed directly to Vercel:
+---
 
-1. Connect your repository to Vercel.
-2. Set Root Directory to `apps/web`.
-3. Set Framework Preset to `Vite`.
-4. Configure environment variables:
-   ```env
-   VITE_FIREBASE_API_KEY=...
-   VITE_FIREBASE_AUTH_DOMAIN=...
-   VITE_FIREBASE_PROJECT_ID=...
-   VITE_FIREBASE_STORAGE_BUCKET=...
-   VITE_FIREBASE_MESSAGING_SENDER_ID=...
-   VITE_FIREBASE_APP_ID=...
-   ```
-5. Build Command: `pnpm run build`
-6. Output Directory: `dist`
+## 1. Web Dashboard & Binary Distribution (Vercel)
 
-## 2. Firebase Backend
+The Web Dashboard in `apps/web` is deployed directly to Vercel:
 
-1. Install Firebase CLI:
-   ```bash
-   npm install -g firebase-tools
-   ```
-2. Login and select your project:
-   ```bash
-   firebase login
-   firebase use toolguard-prod
-   ```
-3. Deploy Firestore Security Rules & Indexes:
-   ```bash
-   firebase deploy --only firestore
-   ```
-4. Deploy Cloud Functions:
-   ```bash
-   firebase deploy --only functions
-   ```
+- **Production URL**: [https://toolguard-app.vercel.app](https://toolguard-app.vercel.app)
+- **Framework Preset**: `Vite`
+- **Output Directory**: `dist`
+- **Build & Bundle Command**:
+  ```bash
+  pnpm run build:all
+  ```
 
-## 3. VS Code Extension
+### Serving Standalone Binaries
+The web app automatically hosts:
+1. **Universal CLI Package**: `https://toolguard-app.vercel.app/toolguard.tgz`
+2. **VS Code Extension**: `https://toolguard-app.vercel.app/toolguard-vscode-1.0.0.vsix`
 
-1. Package the extension:
-   ```bash
-   cd apps/vscode-extension
-   npx @vscode/vsce package
-   ```
-2. Install the resulting `.vsix` file in VS Code:
-   ```bash
-   code --install-extension toolguard-vscode-1.0.0.vsix
-   ```
+Deploying to Vercel production:
+```bash
+npx vercel deploy apps/web/dist --prod --yes
+npx vercel alias set <deployment-url> toolguard-app.vercel.app
+```
+
+---
+
+## 2. Standalone CLI Bundling
+
+ToolGuard bundles the CLI into a self-contained CommonJS executable without external runtime dependency friction:
+
+```bash
+# Bundles packages/cli and produces toolguard.tgz
+pnpm run bundle:cli
+```
+
+Installed anywhere in 1 line:
+```bash
+npm install -g https://toolguard-app.vercel.app/toolguard.tgz
+```
+
+---
+
+## 3. VS Code Extension Packaging
+
+Package the extension with `@vscode/vsce`:
+
+```bash
+cd apps/vscode-extension
+npx @vscode/vsce package
+```
+
+Install the resulting `.vsix` file:
+```bash
+code --install-extension toolguard-vscode-1.0.0.vsix
+```
+
