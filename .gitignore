@@ -1,19 +1,36 @@
-node_modules
-dist
-build
-out
-.turbo
-.cache
-*.log
-.DS_Store
-*.local
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+*.vsix
+*.tgz
+
+# Environment & secrets
 .env
-.toolguard/baseline.json.backup
-coverage
-.git_backup
-scratch
+.env.*
+!.env.example
 
-.vercel
-
+# Logs & temp
+*.log
 deploy-progress.log
 
+# Scratch & backup
+scratch-cli.js
+scratch/
+.git_backup/
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel
+
+# ToolGuard local data
+.toolguard/

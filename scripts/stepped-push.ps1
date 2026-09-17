@@ -49,7 +49,7 @@ $steps = @(
   @{
     Step = 8
     Message = "test: add end-to-end Vitest test suite, CI/CD GitHub Actions security gate, and docs"
-    Files = @("tests", ".github", "docs", "demo", "scripts", "README.md", "apps/web", "apps/vscode-extension")
+    Files = @("tests", ".github", "docs", "demo", "scripts")
   }
 )
 

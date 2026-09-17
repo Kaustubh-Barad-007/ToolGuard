@@ -34,7 +34,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     vscode.commands.registerCommand('toolguard.openDashboard', () => {
       const config = vscode.workspace.getConfiguration('toolguard');
-      const url = config.get<string>('dashboardUrl') || 'http://localhost:5173';
+      const url = config.get<string>('dashboardUrl') || 'https://toolguard-app.vercel.app';
       vscode.env.openExternal(vscode.Uri.parse(url));
     }),
 
