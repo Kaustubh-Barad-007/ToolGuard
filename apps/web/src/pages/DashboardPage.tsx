@@ -16,6 +16,11 @@ import {
   IconButton,
   TextField,
   InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
   useTheme
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -27,6 +32,8 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import SearchIcon from '@mui/icons-material/Search';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { ToolScanStatus } from '@toolguard/shared';
 import { useDemoData } from '../context/DemoDataContext';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -46,6 +53,7 @@ export const DashboardPage: React.FC = () => {
     loadJudgeDemo,
     simulateDrift,
     resetToBaseline,
+    deleteTool,
   } = useDemoData();
 
   const [scanning, setScanning] = useState(false);
@@ -53,6 +61,7 @@ export const DashboardPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPermission, setSelectedPermission] = useState<string>('all');
   const [showGuide, setShowGuide] = useState(false);
+  const [toolToDelete, setToolToDelete] = useState<ToolScanStatus | null>(null);
 
   const openDrift = driftEvents.filter(e => e.status === 'open');
   const isProtected = openDrift.length === 0;
@@ -351,8 +360,8 @@ export const DashboardPage: React.FC = () => {
         <Table size="small">
           <TableHead>
             <TableRow sx={{ backgroundColor: surfaceMuted }}>
-              {['Tool Identity', 'Integrity Status', 'Granted Permissions', 'Execution Boundary'].map(h => (
-                <TableCell key={h} sx={{ fontWeight: 700, fontSize: '0.7rem', color: 'text.secondary', py: 1.2, borderBottom: `1px solid ${border}` }}>
+              {['Tool Identity', 'Integrity Status', 'Granted Permissions', 'Execution Boundary', 'Action'].map((h, idx) => (
+                <TableCell key={h} align={idx === 4 ? 'right' : 'left'} sx={{ fontWeight: 700, fontSize: '0.7rem', color: 'text.secondary', py: 1.2, borderBottom: `1px solid ${border}` }}>
                   {h.toUpperCase()}
                 </TableCell>
               ))}
@@ -361,7 +370,7 @@ export const DashboardPage: React.FC = () => {
           <TableBody>
             {filteredTools.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
+                <TableCell colSpan={5} sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
                   No tools match the selected query.
                 </TableCell>
               </TableRow>
@@ -388,6 +397,24 @@ export const DashboardPage: React.FC = () => {
                     <TableCell sx={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: '0.78rem', color: 'text.secondary' }}>
                       {toolDef?.execution?.command || toolDef?.endpoint || 'static'}
                     </TableCell>
+                    <TableCell align="right" sx={{ py: 0.75 }}>
+                      <Tooltip title={`Completely delete ${tool.name} from project`}>
+                        <IconButton
+                          size="small"
+                          onClick={() => setToolToDelete(tool)}
+                          sx={{
+                            color: 'text.secondary',
+                            p: 0.75,
+                            '&:hover': {
+                              color: '#f43f5e',
+                              backgroundColor: 'rgba(244,63,94,0.08)'
+                            }
+                          }}
+                        >
+                          <DeleteOutlineIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -395,6 +422,56 @@ export const DashboardPage: React.FC = () => {
           </TableBody>
         </Table>
       </Paper>
+
+      {/* Delete Tool Confirmation Dialog */}
+      <Dialog
+        open={Boolean(toolToDelete)}
+        onClose={() => setToolToDelete(null)}
+        PaperProps={{
+          sx: {
+            backgroundColor: surface,
+            borderColor: border,
+            borderWidth: 1,
+            borderStyle: 'solid',
+            borderRadius: '10px',
+            maxWidth: 440,
+            p: 1
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 750, fontSize: '1.05rem', color: 'text.primary', pb: 1 }}>
+          Completely Delete Tool?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: 'text.secondary', fontSize: '0.86rem', lineHeight: 1.6 }}>
+            Are you sure you want to permanently delete <strong>{toolToDelete?.name}</strong> from this project?
+            This will remove the tool definition and recalculate your SHA-256 cryptographic baseline.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setToolToDelete(null)}
+            size="small"
+            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            size="small"
+            onClick={() => {
+              if (toolToDelete) {
+                deleteTool(toolToDelete.toolId);
+                setToolToDelete(null);
+              }
+            }}
+            sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px', px: 2 }}
+          >
+            Delete Tool
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -33,6 +33,7 @@ interface DemoContextType {
   switchWorkspace: (workspaceId: string) => void;
   importWorkspaceBaseline: (baselineData: any, customName?: string, customTools?: ToolDefinition[]) => boolean;
   exportActiveBaseline: () => void;
+  deleteTool: (toolId: string) => boolean;
   disconnectProject: () => void;
   loadJudgeDemo: () => void;
   exitJudgeDemo: () => void;
@@ -377,6 +378,80 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  // Completely delete a tool from the current workspace and update baseline
+  const deleteTool = (toolId: string): boolean => {
+    try {
+      const updatedTools = tools.filter(t => (t.id || t.name) !== toolId && t.name !== toolId);
+
+      // Update baseline: remove the tool entry
+      let updatedBaseline: Baseline = { ...baseline };
+      if (updatedBaseline.tools) {
+        const updatedToolsMap = { ...updatedBaseline.tools };
+        const matchingKey = Object.keys(updatedToolsMap).find(
+          k => k === toolId || updatedToolsMap[k].name === toolId
+        );
+        if (matchingKey) {
+          delete updatedToolsMap[matchingKey];
+        }
+        updatedBaseline = {
+          ...updatedBaseline,
+          tools: updatedToolsMap,
+          toolCount: Object.keys(updatedToolsMap).length
+        };
+      }
+
+      setTools(updatedTools);
+      setBaseline(updatedBaseline);
+
+      // Update workspace profile
+      if (activeWorkspace) {
+        const updatedProfile: WorkspaceProfile = {
+          ...activeWorkspace,
+          tools: updatedTools,
+          baseline: updatedBaseline
+        };
+        setWorkspaces(prev => prev.map(w => w.id === activeWorkspace.id ? updatedProfile : w));
+      }
+
+      // Re-run comparison
+      if (updatedTools.length > 0 && updatedBaseline.baselineId !== 'bl-empty') {
+        const comp = BaselineManager.compare(updatedTools, updatedBaseline);
+        setScanStatuses(comp.tools);
+        const detected = comp.tools.filter(t => t.driftDetected);
+        setDriftEvents(detected.map(d => ({
+          eventId: `drift-${d.toolId}-${Date.now()}`,
+          projectId: activeWorkspace ? activeWorkspace.id : 'project',
+          toolId: d.toolId,
+          toolName: d.name,
+          baselineId: updatedBaseline.baselineId,
+          scanId: `scan-${Date.now()}`,
+          detectedAt: new Date().toISOString(),
+          status: 'open',
+          severity: d.status === 'HIGH RISK' ? 'high' : 'medium',
+          changes: d.changes
+        })));
+      } else {
+        setScanStatuses([]);
+        setDriftEvents([]);
+      }
+
+      const audit: AuditEvent = {
+        auditId: `audit-${Date.now()}`,
+        action: 'BASELINE_UPDATED',
+        actorId: 'user',
+        projectId: activeWorkspace ? activeWorkspace.id : 'project',
+        timestamp: new Date().toISOString(),
+        metadata: { details: `Deleted tool ${toolId} from project manifest and updated cryptographic baseline` }
+      };
+      setAuditLogs(prev => [audit, ...prev]);
+
+      return true;
+    } catch (err) {
+      console.error('Failed to delete tool:', err);
+      return false;
+    }
+  };
+
   // Disconnect active project to return to clean zero state
   const disconnectProject = () => {
     setActiveWorkspaceId(null);
@@ -520,6 +595,7 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         switchWorkspace,
         importWorkspaceBaseline,
         exportActiveBaseline,
+        deleteTool,
         disconnectProject,
         loadJudgeDemo,
         exitJudgeDemo,

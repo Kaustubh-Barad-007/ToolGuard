@@ -608,4 +608,101 @@ program
     }
   });
 
+// 14. COMMAND: remove / delete / rm
+program
+  .command('remove <toolName>')
+  .alias('delete')
+  .alias('rm')
+  .description('Completely delete a tool from the project and update the trusted baseline')
+  .action(async (toolName) => {
+    const cwd = process.cwd();
+    const baseline = await FileBaselineStorage.loadLocalBaseline(cwd);
+    if (!baseline) {
+      console.error('No trusted baseline found. Run `toolguard init` first.');
+      process.exit(2);
+    }
+
+    const toolEntries = Object.entries(baseline.tools);
+    const matchingKey = toolEntries.find(
+      ([key, entry]) => key.toLowerCase() === toolName.toLowerCase() || entry.name.toLowerCase() === toolName.toLowerCase()
+    )?.[0];
+
+    const toolsDir = path.join(cwd, '.toolguard', 'tools');
+    let fileRemoved = false;
+
+    // 1. Check .toolguard/tools/ directory for definition files
+    try {
+      const files = await fs.readdir(toolsDir).catch(() => [] as string[]);
+      for (const file of files) {
+        if (!file.endsWith('.json')) continue;
+        const filePath = path.join(toolsDir, file);
+        try {
+          const content = JSON.parse(await fs.readFile(filePath, 'utf8'));
+          if (Array.isArray(content)) {
+            const filtered = content.filter((t: any) =>
+              (t.id || t.name)?.toLowerCase() !== toolName.toLowerCase() &&
+              t.name?.toLowerCase() !== toolName.toLowerCase() &&
+              (!matchingKey || ((t.id || t.name) !== matchingKey && t.name !== baseline.tools[matchingKey]?.name))
+            );
+            if (filtered.length !== content.length) {
+              fileRemoved = true;
+              if (filtered.length === 0) {
+                await fs.unlink(filePath);
+                console.log(`✓ Removed tool configuration file .toolguard/tools/${file}`);
+              } else {
+                await fs.writeFile(filePath, JSON.stringify(filtered, null, 2), 'utf8');
+                console.log(`✓ Removed tool from .toolguard/tools/${file}`);
+              }
+            }
+          } else if (content && typeof content === 'object') {
+            const id = (content.id || content.name || '').toLowerCase();
+            const name = (content.name || '').toLowerCase();
+            const targetLower = toolName.toLowerCase();
+            if (id === targetLower || name === targetLower || (matchingKey && (id === matchingKey.toLowerCase() || name === baseline.tools[matchingKey]?.name.toLowerCase()))) {
+              await fs.unlink(filePath);
+              fileRemoved = true;
+              console.log(`✓ Removed tool configuration file .toolguard/tools/${file}`);
+            }
+          }
+        } catch {}
+      }
+    } catch {}
+
+    // 2. If it was an npm script tool
+    const targetScript = toolName.startsWith('npm:') ? toolName.replace(/^npm:/, '') : (matchingKey && baseline.tools[matchingKey]?.name.startsWith('npm:') ? baseline.tools[matchingKey].name.replace(/^npm:/, '') : null);
+    if (targetScript) {
+      const pkgPath = path.join(cwd, 'package.json');
+      try {
+        const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
+        if (pkg.scripts && pkg.scripts[targetScript]) {
+          delete pkg.scripts[targetScript];
+          await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+          console.log(`✓ Removed npm script "${targetScript}" from package.json`);
+          fileRemoved = true;
+        }
+      } catch {}
+    }
+
+    if (!matchingKey && !fileRemoved) {
+      console.error(`Tool "${toolName}" not found in current project baseline or tool definitions.`);
+      console.log('Available tools:');
+      for (const entry of Object.values(baseline.tools)) {
+        console.log(`  - ${entry.name}`);
+      }
+      process.exit(1);
+    }
+
+    if (matchingKey) {
+      const displayName = baseline.tools[matchingKey].name;
+      delete baseline.tools[matchingKey];
+      baseline.toolCount = Object.keys(baseline.tools).length;
+      baseline.updatedAt = new Date().toISOString();
+      await FileBaselineStorage.saveLocalBaseline(cwd, baseline);
+      console.log(`\n✓ Completely deleted tool "${displayName}" from workspace.`);
+      console.log(`✓ Recalculated SHA-256 cryptographic baseline (${baseline.toolCount} tool(s) remaining).\n`);
+    } else {
+      console.log(`\n✓ Completely removed tool file for "${toolName}".\n`);
+    }
+  });
+
 program.parse(process.argv);
