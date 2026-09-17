@@ -14,7 +14,7 @@ export const ThemeModeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [mode, setModeState] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('toolguard-theme-mode');
     if (saved === 'light' || saved === 'dark') return saved;
-    return 'dark'; // Default to dark developer theme
+    return 'light'; // Default to ultra-premium light mode
   });
 
   useEffect(() => {

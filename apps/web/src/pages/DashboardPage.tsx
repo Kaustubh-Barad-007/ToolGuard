@@ -33,6 +33,11 @@ import CheckIcon from '@mui/icons-material/Check';
 import SearchIcon from '@mui/icons-material/Search';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
+import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import { ToolScanStatus } from '@toolguard/shared';
 import { useDemoData } from '../context/DemoDataContext';
 import { StatusBadge } from '../components/StatusBadge';
@@ -134,10 +139,10 @@ export const DashboardPage: React.FC = () => {
 
     return (
       <Box sx={{ maxWidth: 640, mx: 'auto', pt: 6, pb: 4, textAlign: 'center' }}>
-        <Box sx={{ width: 62, height: 62, borderRadius: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 2.5, boxShadow: '0 8px 24px rgba(16,185,129,0.3)' }}>
-          <ShieldOutlinedIcon sx={{ color: '#fff', fontSize: 34 }} />
+        <Box sx={{ width: 68, height: 68, borderRadius: '20px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 2.5, boxShadow: '0 8px 24px rgba(16,185,129,0.3)' }}>
+          <ShieldOutlinedIcon sx={{ color: '#fff', fontSize: 36 }} />
         </Box>
-        <Typography variant="h5" sx={{ fontWeight: 750, mb: 1, color: 'text.primary', letterSpacing: '-0.02em' }}>
+        <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: 'text.primary', letterSpacing: '-0.025em' }}>
           Connect a Project to ToolGuard
         </Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3.5, lineHeight: 1.6, maxWidth: 500, mx: 'auto' }}>
@@ -146,28 +151,28 @@ export const DashboardPage: React.FC = () => {
 
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap', mb: 4 }}>
           <Button variant="contained" startIcon={<HubOutlinedIcon />} onClick={() => navigate('/integrations')}
-            sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '7px', px: 2.5, py: 0.9 }}>
+            sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px', px: 2.5, py: 1 }}>
             Connect Project (IDE / CLI)
           </Button>
-          <Button variant="outlined" startIcon={<BoltIcon sx={{ color: '#f59e0b' }} />}
+          <Button variant="outlined" startIcon={<BoltIcon sx={{ color: '#d97706' }} />}
             onClick={() => { loadJudgeDemo(); navigate('/drift'); }}
-            sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '7px', px: 2.5, borderColor: '#f59e0b', color: '#f59e0b', '&:hover': { borderColor: '#d97706', backgroundColor: 'rgba(245,158,11,0.06)' } }}>
+            sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px', px: 2.5, borderColor: '#f59e0b', color: '#d97706', '&:hover': { borderColor: '#d97706', backgroundColor: 'rgba(245,158,11,0.06)' } }}>
             ⚡ 1-Click Evaluation Demo
           </Button>
         </Box>
 
-        <Paper variant="outlined" sx={{ p: 2.5, textAlign: 'left', borderRadius: '10px', backgroundColor: surface, borderColor: border }}>
+        <Paper variant="outlined" sx={{ p: 2.5, textAlign: 'left', borderRadius: '12px', backgroundColor: surface, borderColor: border, boxShadow: isDark ? 'none' : '0 2px 8px rgba(15,23,42,0.04)' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: '0.04em' }}>
+            <Typography variant="caption" sx={{ fontWeight: 750, color: 'text.secondary', letterSpacing: '0.04em' }}>
               UNIVERSAL CLI INSTALL &amp; INITIALIZE
             </Typography>
             <Tooltip title={copiedCmd ? 'Copied!' : 'Copy Commands'}>
               <IconButton size="small" onClick={() => handleCopyCmd(installScript)} sx={{ color: 'text.secondary' }}>
-                {copiedCmd ? <CheckIcon sx={{ fontSize: 16, color: '#10b981' }} /> : <ContentCopyIcon sx={{ fontSize: 16 }} />}
+                {copiedCmd ? <CheckIcon sx={{ fontSize: 16, color: '#059669' }} /> : <ContentCopyIcon sx={{ fontSize: 16 }} />}
               </IconButton>
             </Tooltip>
           </Box>
-          <Box component="pre" sx={{ m: 0, p: 1.5, borderRadius: '6px', backgroundColor: surfaceMuted, border: `1px solid ${border}`, fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: '0.8rem', color: isDark ? '#60a5fa' : '#2563eb', overflowX: 'auto', lineHeight: 1.7 }}>
+          <Box component="pre" sx={{ m: 0, p: 1.8, borderRadius: '8px', backgroundColor: isDark ? '#0b0f19' : '#0f172a', border: `1px solid ${border}`, fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: '0.8rem', color: '#38bdf8', overflowX: 'auto', lineHeight: 1.7 }}>
             {installScript}
           </Box>
         </Paper>
@@ -177,19 +182,51 @@ export const DashboardPage: React.FC = () => {
 
   // ── Connected state metrics ──
   const stats = [
-    { label: 'Monitored Tools', value: scanStatuses.length, sub: 'Active in workspace', accent: '#6366f1' },
-    { label: 'Baseline Version', value: `v${baseline?.version || 1}`, sub: 'SHA-256 verified', accent: '#10b981' },
-    { label: 'Trust Drift', value: openDrift.length, sub: openDrift.length === 0 ? 'All capabilities match' : 'Action required', danger: openDrift.length > 0, accent: openDrift.length > 0 ? '#f43f5e' : '#10b981' },
-    { label: 'Last Verification', value: lastScanTime, sub: 'Continuous monitoring', small: true, accent: '#8b5cf6' },
+    {
+      label: 'Monitored Tools',
+      value: scanStatuses.length,
+      sub: 'Active in workspace',
+      accent: '#4f46e5',
+      icon: <FolderOpenOutlinedIcon sx={{ fontSize: 19, color: '#4f46e5' }} />,
+      iconBg: 'rgba(99, 102, 241, 0.1)'
+    },
+    {
+      label: 'Baseline Version',
+      value: `v${baseline?.version || 1}`,
+      sub: 'SHA-256 verified',
+      accent: '#059669',
+      icon: <VerifiedUserOutlinedIcon sx={{ fontSize: 19, color: '#059669' }} />,
+      iconBg: 'rgba(16, 185, 129, 0.1)'
+    },
+    {
+      label: 'Trust Drift',
+      value: openDrift.length,
+      sub: openDrift.length === 0 ? 'All capabilities match' : 'Action required',
+      danger: openDrift.length > 0,
+      accent: openDrift.length > 0 ? '#e11d48' : '#059669',
+      icon: openDrift.length > 0
+        ? <WarningAmberIcon sx={{ fontSize: 19, color: '#e11d48' }} />
+        : <CheckCircleOutlineIcon sx={{ fontSize: 19, color: '#059669' }} />,
+      iconBg: openDrift.length > 0 ? 'rgba(244, 63, 94, 0.1)' : 'rgba(16, 185, 129, 0.1)'
+    },
+    {
+      label: 'Last Verification',
+      value: lastScanTime,
+      sub: 'Continuous monitoring',
+      small: true,
+      accent: '#8b5cf6',
+      icon: <HistoryOutlinedIcon sx={{ fontSize: 19, color: '#8b5cf6' }} />,
+      iconBg: 'rgba(139, 92, 246, 0.1)'
+    },
   ];
 
   return (
-    <Box sx={{ maxWidth: 1120 }}>
+    <Box sx={{ maxWidth: 1140, mx: 'auto' }}>
       {/* Header Banner */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3.5, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-            <Typography variant="h5" sx={{ fontWeight: 750, color: 'text.primary', letterSpacing: '-0.02em' }}>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.025em' }}>
               {activeWorkspace.name}
             </Typography>
             <Chip
@@ -197,36 +234,36 @@ export const DashboardPage: React.FC = () => {
               label={isProtected ? 'CRYPTOGRAPHICALLY PROTECTED' : 'UNAUTHORIZED DRIFT DETECTED'}
               size="small"
               sx={{
-                height: 22, fontSize: '0.68rem', fontWeight: 700, borderRadius: '6px',
-                backgroundColor: isProtected ? 'rgba(16,185,129,0.12)' : 'rgba(244,63,94,0.12)',
-                color: isProtected ? '#10b981' : '#f43f5e',
+                height: 23, fontSize: '0.68rem', fontWeight: 750, borderRadius: '6px',
+                backgroundColor: isProtected ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)',
+                color: isProtected ? '#047857' : '#be123c',
                 border: `1px solid ${isProtected ? 'rgba(16,185,129,0.3)' : 'rgba(244,63,94,0.3)'}`
               }}
             />
           </Box>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
             {activeWorkspace.stack} · <strong>{scanStatuses.length} tools</strong> verified against SHA-256 cryptographic baseline
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button variant="outlined" size="small" startIcon={<HelpOutlineIcon sx={{ fontSize: '14px !important' }} />} onClick={() => setShowGuide(!showGuide)}
-            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: border, color: 'text.secondary', '&:hover': { borderColor: 'text.primary', color: 'text.primary' } }}>
+        <Box sx={{ display: 'flex', gap: 1.25, flexWrap: 'wrap' }}>
+          <Button variant="outlined" size="small" startIcon={<HelpOutlineIcon sx={{ fontSize: '15px !important' }} />} onClick={() => setShowGuide(!showGuide)}
+            sx={{ textTransform: 'none', fontWeight: 650, borderRadius: '8px', fontSize: '0.82rem', borderColor: border, color: 'text.secondary', '&:hover': { borderColor: '#cbd5e1', color: 'text.primary' } }}>
             {showGuide ? 'Hide Guide' : 'How It Works'}
           </Button>
           <Button
             variant="outlined"
             size="small"
-            startIcon={<PlayArrowIcon sx={{ fontSize: '15px !important' }} />}
+            startIcon={<PlayArrowIcon sx={{ fontSize: '15px !important', color: '#059669' }} />}
             onClick={handleScan}
             disabled={scanning}
             sx={{
               textTransform: 'none',
-              fontWeight: 600,
-              borderRadius: '6px',
+              fontWeight: 650,
+              borderRadius: '8px',
               fontSize: '0.82rem',
               borderColor: border,
               color: 'text.primary',
-              '&:hover': { borderColor: 'text.primary' }
+              '&:hover': { borderColor: '#059669' }
             }}
           >
             {scanning ? 'Verifying…' : 'Run Verification Scan'}
@@ -239,7 +276,7 @@ export const DashboardPage: React.FC = () => {
                 color="error"
                 size="small"
                 onClick={() => navigate('/drift')}
-                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px', fontSize: '0.82rem', px: 2 }}
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px', fontSize: '0.82rem', px: 2 }}
               >
                 Review {openDrift.length} Drift Alert{openDrift.length > 1 ? 's' : ''}
               </Button>
@@ -247,7 +284,7 @@ export const DashboardPage: React.FC = () => {
                 variant="outlined"
                 size="small"
                 onClick={handleReset}
-                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: border, color: 'text.secondary' }}
+                sx={{ textTransform: 'none', fontWeight: 650, borderRadius: '8px', fontSize: '0.82rem', borderColor: border, color: 'text.secondary' }}
               >
                 Restore Baseline
               </Button>
@@ -256,16 +293,17 @@ export const DashboardPage: React.FC = () => {
             <Button
               variant="outlined"
               size="small"
-              startIcon={<BoltIcon sx={{ fontSize: '14px !important', color: '#f59e0b' }} />}
+              startIcon={<BoltIcon sx={{ fontSize: '15px !important', color: '#d97706' }} />}
               onClick={handleSimulate}
               sx={{
                 textTransform: 'none',
-                fontWeight: 600,
-                borderRadius: '6px',
+                fontWeight: 650,
+                borderRadius: '8px',
                 fontSize: '0.82rem',
                 borderColor: 'rgba(245,158,11,0.4)',
-                color: '#f59e0b',
-                '&:hover': { borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.06)' }
+                color: '#b45309',
+                backgroundColor: 'rgba(245,158,11,0.04)',
+                '&:hover': { borderColor: '#d97706', backgroundColor: 'rgba(245,158,11,0.08)' }
               }}
             >
               Simulate Threat
@@ -277,14 +315,15 @@ export const DashboardPage: React.FC = () => {
             onClick={() => setConfirmDisconnect(true)}
             sx={{
               textTransform: 'none',
-              fontWeight: 600,
-              borderRadius: '6px',
+              fontWeight: 650,
+              borderRadius: '8px',
               fontSize: '0.82rem',
               borderColor: 'rgba(244,63,94,0.3)',
-              color: '#f43f5e',
+              color: '#e11d48',
+              backgroundColor: 'rgba(244,63,94,0.03)',
               '&:hover': {
-                borderColor: '#f43f5e',
-                backgroundColor: 'rgba(244,63,94,0.06)'
+                borderColor: '#e11d48',
+                backgroundColor: 'rgba(244,63,94,0.08)'
               }
             }}
           >
@@ -298,7 +337,7 @@ export const DashboardPage: React.FC = () => {
         <Alert
           severity={scanFeedback.severity}
           onClose={() => setScanFeedback(null)}
-          sx={{ mb: 2.5, borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem' }}
+          sx={{ mb: 2.5, borderRadius: '10px', fontWeight: 600, fontSize: '0.85rem' }}
         >
           {scanFeedback.message}
         </Alert>
@@ -306,43 +345,43 @@ export const DashboardPage: React.FC = () => {
 
       {/* Interactive Architecture & Educational Guide Card */}
       {showGuide && (
-        <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: '10px', backgroundColor: surface, borderColor: border }}>
+        <Paper variant="outlined" sx={{ p: 2.5, mb: 3.5, borderRadius: '12px', backgroundColor: surface, borderColor: border, boxShadow: isDark ? 'none' : '0 2px 10px rgba(15,23,42,0.04)' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <ShieldOutlinedIcon sx={{ color: '#10b981', fontSize: 20 }} />
+              <ShieldOutlinedIcon sx={{ color: '#059669', fontSize: 22 }} />
               <Typography variant="subtitle2" sx={{ fontWeight: 750, color: 'text.primary', letterSpacing: '-0.01em' }}>
                 How ToolGuard Protects Your Project (3 Pillars)
               </Typography>
             </Box>
-            <Chip label="Autonomous Continuous Protection" size="small" sx={{ fontSize: '0.68rem', fontWeight: 700, backgroundColor: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }} />
+            <Chip label="Autonomous Continuous Protection" size="small" sx={{ fontSize: '0.68rem', fontWeight: 750, backgroundColor: 'rgba(16,185,129,0.1)', color: '#047857', border: '1px solid rgba(16,185,129,0.3)' }} />
           </Box>
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
-              <Box sx={{ p: 1.75, borderRadius: '8px', backgroundColor: isDark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.25)', height: '100%' }}>
-                <Typography variant="caption" sx={{ fontWeight: 800, color: '#6366f1', display: 'block', mb: 0.75, letterSpacing: '0.03em' }}>
+              <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: isDark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.2)', height: '100%' }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: '#4f46e5', display: 'block', mb: 0.75, letterSpacing: '0.04em' }}>
                   1. CRYPTOGRAPHIC BASELINE
                 </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.6 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.6 }}>
                   Freezes all discovered tool definitions, npm commands, and MCP parameters into deterministic SHA-256 hashes via <code>toolguard init</code>.
                 </Typography>
               </Box>
             </Grid>
             <Grid item xs={12} md={4}>
-              <Box sx={{ p: 1.75, borderRadius: '8px', backgroundColor: isDark ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.25)', height: '100%' }}>
-                <Typography variant="caption" sx={{ fontWeight: 800, color: '#10b981', display: 'block', mb: 0.75, letterSpacing: '0.03em' }}>
+              <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: isDark ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.2)', height: '100%' }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: '#059669', display: 'block', mb: 0.75, letterSpacing: '0.04em' }}>
                   2. MULTI-SURFACE MONITORING
                 </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.6 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.6 }}>
                   Continuous active monitoring via <strong>VS Code status bar</strong>, <strong>Git pre-commit gate</strong>, and real-time terminal watch (<code>toolguard scan -w</code>).
                 </Typography>
               </Box>
             </Grid>
             <Grid item xs={12} md={4}>
-              <Box sx={{ p: 1.75, borderRadius: '8px', backgroundColor: isDark ? 'rgba(244,63,94,0.06)' : 'rgba(244,63,94,0.04)', border: '1px solid rgba(244,63,94,0.25)', height: '100%' }}>
-                <Typography variant="caption" sx={{ fontWeight: 800, color: '#f43f5e', display: 'block', mb: 0.75, letterSpacing: '0.03em' }}>
+              <Box sx={{ p: 2, borderRadius: '10px', backgroundColor: isDark ? 'rgba(244,63,94,0.06)' : 'rgba(244,63,94,0.04)', border: '1px solid rgba(244,63,94,0.2)', height: '100%' }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: '#e11d48', display: 'block', mb: 0.75, letterSpacing: '0.04em' }}>
                   3. ZERO-TRUST DEFENSE
                 </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.6 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.6 }}>
                   If a tool secretly expands to <code>admin</code> or an external network endpoint, ToolGuard alerts in &lt;100ms and blocks runtime execution.
                 </Typography>
               </Box>
@@ -362,8 +401,8 @@ export const DashboardPage: React.FC = () => {
       {/* Drift Alert Banner */}
       {!isProtected && (
         <Alert severity="error" variant="outlined"
-          action={<Button color="error" size="small" onClick={() => navigate('/drift')} sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap' }}>Inspect Diff &amp; Resolve →</Button>}
-          sx={{ mb: 3, borderRadius: '8px', fontSize: '0.84rem', borderColor: 'rgba(244,63,94,0.4)', backgroundColor: isDark ? 'rgba(244,63,94,0.06)' : 'rgba(244,63,94,0.04)' }}>
+          action={<Button color="error" size="small" onClick={() => navigate('/drift')} sx={{ textTransform: 'none', fontWeight: 750, fontSize: '0.78rem', whiteSpace: 'nowrap' }}>Inspect Diff &amp; Resolve →</Button>}
+          sx={{ mb: 3, borderRadius: '10px', fontSize: '0.85rem', borderColor: 'rgba(244,63,94,0.4)', backgroundColor: isDark ? 'rgba(244,63,94,0.06)' : 'rgba(244,63,94,0.04)' }}>
           <strong>Trust Drift Alert:</strong> Detected {openDrift.length} unauthorized capability alteration(s) violating the baseline fingerprint.
         </Alert>
       )}
@@ -372,15 +411,36 @@ export const DashboardPage: React.FC = () => {
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {stats.map((s) => (
           <Grid item xs={6} sm={3} key={s.label}>
-            <Paper variant="outlined" sx={{ p: 2.25, borderRadius: '8px', backgroundColor: surface, borderColor: border, position: 'relative', overflow: 'hidden' }}>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2.25,
+                borderRadius: '12px',
+                backgroundColor: surface,
+                borderColor: border,
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: isDark ? 'none' : '0 1px 3px rgba(15,23,42,0.03), 0 4px 12px -2px rgba(15,23,42,0.04)',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: isDark ? 'none' : '0 8px 24px -4px rgba(15, 23, 42, 0.08)'
+                }
+              }}
+            >
               <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', backgroundColor: s.accent }} />
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.04em' }}>
-                {s.label.toUpperCase()}
-              </Typography>
-              <Typography sx={{ fontWeight: 750, fontSize: s.small ? '1.05rem' : '1.6rem', mt: 0.5, color: s.danger ? '#f43f5e' : 'text.primary', lineHeight: 1.2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 750, fontSize: '0.68rem', letterSpacing: '0.05em' }}>
+                  {s.label.toUpperCase()}
+                </Typography>
+                <Box sx={{ width: 30, height: 30, borderRadius: '8px', backgroundColor: s.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {s.icon}
+                </Box>
+              </Box>
+              <Typography sx={{ fontWeight: 800, fontSize: s.small ? '1.05rem' : '1.65rem', color: s.danger ? '#e11d48' : 'text.primary', lineHeight: 1.2, letterSpacing: '-0.025em' }}>
                 {s.value}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.72rem' }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.72rem', fontWeight: 500, mt: 0.5, display: 'block' }}>
                 {s.sub}
               </Typography>
             </Paper>
@@ -389,7 +449,7 @@ export const DashboardPage: React.FC = () => {
       </Grid>
 
       {/* Capability Search & Filter Toolbar */}
-      <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5, borderRadius: '8px', backgroundColor: surface, borderColor: border, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
+      <Paper variant="outlined" sx={{ p: 1.5, mb: 2, borderRadius: '10px', backgroundColor: surface, borderColor: border, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, boxShadow: isDark ? 'none' : '0 1px 3px rgba(15,23,42,0.02)' }}>
         <TextField
           size="small"
           placeholder="Filter tools by name or command..."
@@ -403,17 +463,18 @@ export const DashboardPage: React.FC = () => {
             )
           }}
           sx={{
-            width: { xs: '100%', sm: 280 },
+            width: { xs: '100%', sm: 300 },
             '& .MuiOutlinedInput-root': {
-              borderRadius: '6px',
+              borderRadius: '8px',
               fontSize: '0.82rem',
-              backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'
+              backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc',
+              '& fieldset': { borderColor: border }
             }
           }}
         />
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mr: 0.5, fontSize: '0.72rem' }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, mr: 0.5, fontSize: '0.72rem', letterSpacing: '0.03em' }}>
             PERMISSION:
           </Typography>
           {[
@@ -430,13 +491,14 @@ export const DashboardPage: React.FC = () => {
               clickable
               onClick={() => setSelectedPermission(filterItem.value)}
               sx={{
-                height: 22,
+                height: 23,
                 fontSize: '0.7rem',
-                fontWeight: 650,
-                borderRadius: '5px',
-                backgroundColor: selectedPermission === filterItem.value ? (isDark ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.15)') : 'transparent',
-                color: selectedPermission === filterItem.value ? '#10b981' : 'text.secondary',
-                border: selectedPermission === filterItem.value ? '1px solid rgba(16,185,129,0.4)' : `1px solid ${border}`
+                fontWeight: 700,
+                borderRadius: '6px',
+                backgroundColor: selectedPermission === filterItem.value ? (isDark ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.12)') : 'transparent',
+                color: selectedPermission === filterItem.value ? '#047857' : 'text.secondary',
+                border: selectedPermission === filterItem.value ? '1px solid rgba(16,185,129,0.4)' : `1px solid ${border}`,
+                transition: 'all 0.15s ease'
               }}
             />
           ))}
@@ -444,21 +506,21 @@ export const DashboardPage: React.FC = () => {
       </Paper>
 
       {/* Tools Capability Manifest Table */}
-      <Paper variant="outlined" sx={{ borderRadius: '8px', overflow: 'hidden', backgroundColor: surface, borderColor: border }}>
-        <Box sx={{ px: 2.5, py: 1.5, borderBottom: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Paper variant="outlined" sx={{ borderRadius: '12px', overflow: 'hidden', backgroundColor: surface, borderColor: border, boxShadow: isDark ? 'none' : '0 1px 3px rgba(15,23,42,0.03), 0 6px 18px -3px rgba(15,23,42,0.05)' }}>
+        <Box sx={{ px: 2.5, py: 1.8, borderBottom: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: isDark ? surface : '#ffffff' }}>
           <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.01em' }}>
               Tool Capability Manifest ({filteredTools.length} tools)
             </Typography>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>Cryptographic SHA-256 fingerprint &amp; runtime permission boundaries</Typography>
           </Box>
-          <Chip label="SHA-256 ZERO-TRUST" size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : 'rgba(16,185,129,0.08)', color: '#10b981' }} />
+          <Chip label="SHA-256 ZERO-TRUST" size="small" sx={{ height: 21, fontSize: '0.65rem', fontWeight: 750, backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : 'rgba(16,185,129,0.09)', color: '#047857', border: '1px solid rgba(16,185,129,0.25)' }} />
         </Box>
         <Table size="small">
           <TableHead>
             <TableRow sx={{ backgroundColor: surfaceMuted }}>
               {['Tool Identity', 'Integrity Status', 'Granted Permissions', 'Execution Boundary', 'Action'].map((h, idx) => (
-                <TableCell key={h} align={idx === 4 ? 'right' : 'left'} sx={{ fontWeight: 700, fontSize: '0.7rem', color: 'text.secondary', py: 1.2, borderBottom: `1px solid ${border}` }}>
+                <TableCell key={h} align={idx === 4 ? 'right' : 'left'} sx={{ fontWeight: 750, fontSize: '0.7rem', color: 'text.secondary', py: 1.3, borderBottom: `1px solid ${border}` }}>
                   {h.toUpperCase()}
                 </TableCell>
               ))}
@@ -467,7 +529,7 @@ export const DashboardPage: React.FC = () => {
           <TableBody>
             {filteredTools.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
+                <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
                   No tools match the selected query.
                 </TableCell>
               </TableRow>
@@ -475,24 +537,27 @@ export const DashboardPage: React.FC = () => {
               filteredTools.map((tool) => {
                 const toolDef = tools.find(t => (t.id || t.name) === tool.toolId || t.name === tool.name);
                 return (
-                  <TableRow key={tool.toolId} hover sx={{ '& td': { borderBottom: `1px solid ${border}`, py: 1.25 } }}>
-                    <TableCell sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.84rem', fontFamily: '"JetBrains Mono", ui-monospace, monospace' }}>
+                  <TableRow key={tool.toolId} hover sx={{ '& td': { borderBottom: `1px solid ${border}`, py: 1.4 }, transition: 'background-color 0.15s ease' }}>
+                    <TableCell sx={{ fontWeight: 750, color: 'text.primary', fontSize: '0.84rem', fontFamily: '"JetBrains Mono", ui-monospace, monospace' }}>
                       {tool.name}
                     </TableCell>
                     <TableCell><StatusBadge status={tool.status} /></TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                      <Box sx={{ display: 'flex', gap: 0.6, flexWrap: 'wrap' }}>
                         {toolDef?.permissions?.map((perm: string) => (
                           <Chip key={perm} label={perm} size="small" sx={{
-                            height: 19, fontSize: '0.67rem', fontWeight: 650, borderRadius: '4px',
-                            backgroundColor: perm === 'admin' ? 'rgba(244,63,94,0.12)' : perm === 'network' ? 'rgba(245,158,11,0.12)' : perm === 'write' ? 'rgba(99,102,241,0.12)' : 'rgba(16,185,129,0.12)',
-                            color: perm === 'admin' ? '#f43f5e' : perm === 'network' ? '#f59e0b' : perm === 'write' ? '#818cf8' : '#10b981',
+                            height: 20, fontSize: '0.67rem', fontWeight: 700, borderRadius: '5px',
+                            backgroundColor: perm === 'admin' ? 'rgba(244,63,94,0.1)' : perm === 'network' ? 'rgba(245,158,11,0.1)' : perm === 'write' ? 'rgba(99,102,241,0.1)' : 'rgba(16,185,129,0.1)',
+                            color: perm === 'admin' ? '#be123c' : perm === 'network' ? '#b45309' : perm === 'write' ? '#4f46e5' : '#047857',
+                            border: `1px solid ${perm === 'admin' ? 'rgba(244,63,94,0.25)' : perm === 'network' ? 'rgba(245,158,11,0.25)' : perm === 'write' ? 'rgba(99,102,241,0.25)' : 'rgba(16,185,129,0.25)'}`
                           }} />
                         )) || <Typography variant="caption" sx={{ color: 'text.disabled' }}>—</Typography>}
                       </Box>
                     </TableCell>
                     <TableCell sx={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: '0.78rem', color: 'text.secondary' }}>
-                      {toolDef?.execution?.command || toolDef?.endpoint || 'static'}
+                      <Box component="span" sx={{ px: 1, py: 0.4, borderRadius: '5px', backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#f1f5f9', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'}`, display: 'inline-block' }}>
+                        {toolDef?.execution?.command || toolDef?.endpoint || 'static'}
+                      </Box>
                     </TableCell>
                     <TableCell align="right" sx={{ py: 0.75 }}>
                       <Tooltip title={`Completely delete ${tool.name} from project`}>
@@ -503,7 +568,7 @@ export const DashboardPage: React.FC = () => {
                             color: 'text.secondary',
                             p: 0.75,
                             '&:hover': {
-                              color: '#f43f5e',
+                              color: '#e11d48',
                               backgroundColor: 'rgba(244,63,94,0.08)'
                             }
                           }}
@@ -530,13 +595,13 @@ export const DashboardPage: React.FC = () => {
             borderColor: border,
             borderWidth: 1,
             borderStyle: 'solid',
-            borderRadius: '10px',
+            borderRadius: '12px',
             maxWidth: 440,
             p: 1
           }
         }}
       >
-        <DialogTitle sx={{ fontWeight: 750, fontSize: '1.05rem', color: 'text.primary', pb: 1 }}>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.05rem', color: 'text.primary', pb: 1, letterSpacing: '-0.02em' }}>
           Completely Delete Tool?
         </DialogTitle>
         <DialogContent>
@@ -549,7 +614,7 @@ export const DashboardPage: React.FC = () => {
           <Button
             onClick={() => setToolToDelete(null)}
             size="small"
-            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600 }}
+            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 650 }}
           >
             Cancel
           </Button>
@@ -563,7 +628,7 @@ export const DashboardPage: React.FC = () => {
                 setToolToDelete(null);
               }
             }}
-            sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px', px: 2 }}
+            sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px', px: 2 }}
           >
             Delete Tool
           </Button>
@@ -580,13 +645,13 @@ export const DashboardPage: React.FC = () => {
             borderColor: border,
             borderWidth: 1,
             borderStyle: 'solid',
-            borderRadius: '10px',
+            borderRadius: '12px',
             maxWidth: 440,
             p: 1
           }
         }}
       >
-        <DialogTitle sx={{ fontWeight: 750, fontSize: '1.05rem', color: 'text.primary', pb: 1 }}>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.05rem', color: 'text.primary', pb: 1, letterSpacing: '-0.02em' }}>
           Completely Disconnect Project?
         </DialogTitle>
         <DialogContent>
@@ -599,7 +664,7 @@ export const DashboardPage: React.FC = () => {
           <Button
             onClick={() => setConfirmDisconnect(false)}
             size="small"
-            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600 }}
+            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 650 }}
           >
             Cancel
           </Button>
@@ -611,7 +676,7 @@ export const DashboardPage: React.FC = () => {
               setConfirmDisconnect(false);
               disconnectProject();
             }}
-            sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px', px: 2 }}
+            sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px', px: 2 }}
           >
             Disconnect &amp; Remove
           </Button>

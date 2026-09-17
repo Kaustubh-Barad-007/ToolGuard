@@ -127,83 +127,99 @@ export const AppShell: React.FC = () => {
     }
   };
 
-  // High-authority obsidian palette
+  // Ultra-premium palette
   const bg        = isDark ? '#080b11' : '#f8fafc';
   const surface   = isDark ? '#0f141f' : '#ffffff';
   const border    = isDark ? '#1e2638' : '#e2e8f0';
-  const navHover  = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
-  const navActive = isDark ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.09)';
+  const navHover  = isDark ? 'rgba(255,255,255,0.04)' : '#f1f5f9';
+  const navActive = isDark ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.08)';
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: surface, borderRight: `1px solid ${border}` }}>
       {/* Brand Header */}
       <Box
         sx={{
-          px: 2,
-          py: 1.6,
+          px: 2.2,
+          py: 1.8,
           display: 'flex',
           alignItems: 'center',
           gap: 1.25,
           borderBottom: `1px solid ${border}`,
           cursor: 'pointer'
         }}
-        onClick={() => navigate('/dashboard')}
+        onClick={() => navigate('/')}
       >
         <Box
           sx={{
-            width: 30,
-            height: 30,
-            borderRadius: 1.5,
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            width: 34,
+            height: 34,
+            borderRadius: '9px',
+            overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 10px rgba(16, 185, 129, 0.35)'
+            boxShadow: '0 2px 10px rgba(16, 185, 129, 0.22)',
+            backgroundColor: '#ffffff',
+            border: '1px solid rgba(226, 232, 240, 0.8)'
           }}
         >
-          <ShieldIcon sx={{ color: '#fff', fontSize: 17 }} />
+          <Box
+            component="img"
+            src="/logo.png"
+            alt="ToolGuard Logo"
+            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+              const target = e.currentTarget;
+              if (!target.dataset.retried) {
+                target.dataset.retried = 'true';
+                target.src = '/logo.svg';
+              }
+            }}
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain'
+            }}
+          />
         </Box>
         <Box>
-          <Typography sx={{ fontWeight: 800, fontSize: '0.96rem', letterSpacing: '-0.02em', color: 'text.primary', lineHeight: 1.1 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: '1.02rem', letterSpacing: '-0.025em', color: 'text.primary', lineHeight: 1.1 }}>
             ToolGuard
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.04em' }}>
-            ZERO-TRUST GUARD
           </Typography>
         </Box>
       </Box>
 
       {/* Navigation items */}
-      <List sx={{ px: 1, py: 1.5, flexGrow: 1 }}>
+      <List sx={{ px: 1.25, py: 1.5, flexGrow: 1 }}>
         {NAV_ITEMS.map((item) => {
           const isSelected = location.pathname === item.path;
           return (
-            <ListItem key={item.path} disablePadding sx={{ mb: 0.35 }}>
+            <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
               <ListItemButton
                 selected={isSelected}
                 onClick={() => { navigate(item.path); if (isMobile) setMobileOpen(false); }}
                 sx={{
-                  borderRadius: '7px',
-                  py: 0.75,
+                  borderRadius: '8px',
+                  py: 0.8,
                   px: 1.25,
-                  minHeight: 36,
-                  color: isSelected ? '#10b981' : 'text.secondary',
+                  minHeight: 38,
+                  color: isSelected ? '#047857' : 'text.secondary',
                   backgroundColor: isSelected ? navActive : 'transparent',
-                  border: isSelected ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid transparent',
+                  border: isSelected ? '1px solid rgba(16, 185, 129, 0.22)' : '1px solid transparent',
+                  transition: 'all 0.15s ease',
                   '&:hover': { backgroundColor: navHover, color: 'text.primary' },
                   '&.Mui-selected': { backgroundColor: navActive },
                   '&.Mui-selected:hover': { backgroundColor: navActive },
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 28, color: 'inherit', '& svg': { fontSize: 18 } }}>
+                <ListItemIcon sx={{ minWidth: 28, color: isSelected ? '#059669' : 'inherit', '& svg': { fontSize: 18 } }}>
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText
                   primary={item.label}
-                  primaryTypographyProps={{ fontSize: '0.84rem', fontWeight: isSelected ? 650 : 500, color: 'inherit' }}
+                  primaryTypographyProps={{ fontSize: '0.84rem', fontWeight: isSelected ? 700 : 500, color: 'inherit' }}
                 />
                 {item.badgeKey === 'drift' && openDriftCount > 0 && (
-                  <Box sx={{ ml: 'auto', minWidth: 18, height: 18, borderRadius: '9px', backgroundColor: '#f43f5e', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 0.5 }}>
+                  <Box sx={{ ml: 'auto', minWidth: 18, height: 18, borderRadius: '9px', backgroundColor: '#e11d48', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 0.5 }}>
                     <Typography sx={{ fontSize: '0.65rem', color: '#fff', fontWeight: 750, lineHeight: 1 }}>{openDriftCount}</Typography>
                   </Box>
                 )}
@@ -215,14 +231,14 @@ export const AppShell: React.FC = () => {
 
       {/* Live Security Engine Pill */}
       <Box sx={{ p: 1.5, borderTop: `1px solid ${border}` }}>
-        <Box sx={{ p: 1.25, borderRadius: '7px', backgroundColor: isDark ? 'rgba(16, 185, 129, 0.06)' : 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+        <Box sx={{ p: 1.25, borderRadius: '8px', backgroundColor: isDark ? 'rgba(16, 185, 129, 0.06)' : 'rgba(16, 185, 129, 0.06)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
             <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#10b981', animation: 'statusPulse 2s infinite' }} />
-            <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 750, fontSize: '0.67rem', letterSpacing: '0.04em' }}>
+            <Typography variant="caption" sx={{ color: '#059669', fontWeight: 750, fontSize: '0.68rem', letterSpacing: '0.04em' }}>
               SHA-256 ACTIVE
             </Typography>
           </Box>
-          <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.68rem', display: 'block' }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.68rem', display: 'block' }}>
             Continuous baseline watch
           </Typography>
         </Box>
@@ -239,12 +255,13 @@ export const AppShell: React.FC = () => {
         sx={{
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           ml: { md: `${DRAWER_WIDTH}px` },
-          backgroundColor: surface,
+          backgroundColor: isDark ? 'rgba(15, 20, 31, 0.85)' : 'rgba(255, 255, 255, 0.88)',
+          backdropFilter: 'blur(16px)',
           borderBottom: `1px solid ${border}`,
-          boxShadow: 'none',
+          boxShadow: isDark ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.03)',
         }}
       >
-        <Toolbar variant="dense" sx={{ justifyContent: 'space-between', px: { xs: 2, md: 2.5 }, minHeight: '48px !important' }}>
+        <Toolbar variant="dense" sx={{ justifyContent: 'space-between', px: { xs: 2, md: 2.5 }, minHeight: '52px !important' }}>
           {/* Left: Mobile Toggle & Workspace Pill */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {isMobile && (
@@ -258,17 +275,18 @@ export const AppShell: React.FC = () => {
               onClick={(e) => setWorkspaceMenuAnchor(e.currentTarget)}
               endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 15 }} />}
               sx={{
-                py: 0.4, px: 1.25, borderRadius: '6px',
-                backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                py: 0.5, px: 1.5, borderRadius: '8px',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff',
                 border: `1px solid ${border}`,
+                boxShadow: isDark ? 'none' : '0 1px 2px rgba(15,23,42,0.04)',
                 color: 'text.primary',
                 textTransform: 'none',
-                fontWeight: 600,
+                fontWeight: 650,
                 fontSize: '0.82rem',
-                '&:hover': { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' },
+                '&:hover': { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#f8fafc', borderColor: '#cbd5e1' },
               }}
             >
-              <ShieldIcon sx={{ fontSize: 14, color: '#10b981', mr: 0.75 }} />
+              <ShieldIcon sx={{ fontSize: 15, color: '#059669', mr: 0.75 }} />
               {activeWorkspace ? activeWorkspace.name : 'Connect Project'}
             </Button>
           </Box>

@@ -51,28 +51,29 @@ export const DriftEventsPage: React.FC = () => {
   const displayed = filteredEvents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <Box sx={{ maxWidth: 960 }}>
+    <Box sx={{ maxWidth: 1040, mx: 'auto' }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3.5, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-            <Typography variant="h5" sx={{ fontWeight: 750, color: 'text.primary', letterSpacing: '-0.02em' }}>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.025em' }}>
               Trust Drift Events
             </Typography>
             <Chip
               label={`${driftEvents.filter(e => e.status === 'open').length} OPEN`}
               size="small"
               sx={{
-                height: 20,
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                backgroundColor: driftEvents.some(e => e.status === 'open') ? 'rgba(244, 63, 94, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-                color: driftEvents.some(e => e.status === 'open') ? '#f43f5e' : '#10b981',
-                border: `1px solid ${driftEvents.some(e => e.status === 'open') ? 'rgba(244, 63, 94, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`
+                height: 22,
+                fontSize: '0.67rem',
+                fontWeight: 750,
+                backgroundColor: driftEvents.some(e => e.status === 'open') ? 'rgba(244, 63, 94, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                color: driftEvents.some(e => e.status === 'open') ? '#be123c' : '#047857',
+                border: `1px solid ${driftEvents.some(e => e.status === 'open') ? 'rgba(244, 63, 94, 0.28)' : 'rgba(16, 185, 129, 0.28)'}`,
+                borderRadius: '6px'
               }}
             />
           </Box>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
             Zero-trust verification comparing active runtime tool capabilities against frozen SHA-256 baselines.
           </Typography>
         </Box>
@@ -84,12 +85,14 @@ export const DriftEventsPage: React.FC = () => {
           onClick={loadJudgeDemo}
           sx={{
             textTransform: 'none',
-            fontWeight: 700,
-            borderRadius: '6px',
-            background: '#f59e0b',
+            fontWeight: 750,
+            borderRadius: '8px',
+            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
             color: '#fff',
-            '&:hover': { background: '#d97706' },
-            boxShadow: 'none'
+            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+            px: 2,
+            py: 0.8,
+            '&:hover': { background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' }
           }}
         >
           ⚡ Simulate Drift Demo
@@ -97,15 +100,22 @@ export const DriftEventsPage: React.FC = () => {
       </Box>
 
       {/* Filter tabs */}
-      <Box sx={{ borderBottom: `1px solid ${border}`, mb: 2.5 }}>
+      <Box sx={{ borderBottom: `1px solid ${border}`, mb: 3 }}>
         <Tabs
           value={filter}
           onChange={(_, v) => { setFilter(v); setPage(1); }}
           sx={{
-            minHeight: 38,
-            '& .MuiTab-root': { minHeight: 38, fontSize: '0.82rem', textTransform: 'none', fontWeight: 600, py: 0.75 },
-            '& .Mui-selected': { color: '#10b981' },
-            '& .MuiTabs-indicator': { backgroundColor: '#10b981' }
+            minHeight: 40,
+            '& .MuiTab-root': {
+              minHeight: 40,
+              fontSize: '0.84rem',
+              textTransform: 'none',
+              fontWeight: 650,
+              py: 0.75,
+              color: 'text.secondary',
+              '&.Mui-selected': { color: isDark ? '#10b981' : '#059669', fontWeight: 750 }
+            },
+            '& .MuiTabs-indicator': { backgroundColor: isDark ? '#10b981' : '#059669', height: 2.5, borderRadius: 1 }
           }}
         >
           <Tab label={`All (${driftEvents.length})`} value="all" />
@@ -117,22 +127,22 @@ export const DriftEventsPage: React.FC = () => {
 
       {/* Empty state */}
       {displayed.length === 0 && (
-        <Paper variant="outlined" sx={{ textAlign: 'center', py: 6, px: 3, borderRadius: 2, borderColor: border, backgroundColor: surface }}>
-          <Box sx={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#10b981', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 1.5 }}>
-            <CheckCircleOutlineIcon sx={{ fontSize: 24 }} />
+        <Paper variant="outlined" sx={{ textAlign: 'center', py: 7, px: 3, borderRadius: '12px', borderColor: border, backgroundColor: surface, boxShadow: isDark ? 'none' : '0 1px 3px rgba(15,23,42,0.03), 0 6px 18px -3px rgba(15,23,42,0.04)' }}>
+          <Box sx={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#059669', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+            <CheckCircleOutlineIcon sx={{ fontSize: 28 }} />
           </Box>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.5, letterSpacing: '-0.02em' }}>
             Cryptographic Baseline Intact
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 460, mx: 'auto', mb: 3, lineHeight: 1.6 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 480, mx: 'auto', mb: 3.5, lineHeight: 1.6 }}>
             All monitored tools strictly match their authorized SHA-256 fingerprint. No unauthorized capability expansions detected.
           </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5 }}>
-            <Button variant="outlined" size="small" onClick={triggerScan} sx={{ textTransform: 'none', borderRadius: '6px', borderColor: border, color: 'text.primary' }}>
+            <Button variant="outlined" size="small" onClick={triggerScan} sx={{ textTransform: 'none', borderRadius: '8px', borderColor: border, color: 'text.primary', fontWeight: 650, px: 2.2 }}>
               Run Verification Scan
             </Button>
             <Button variant="contained" size="small" startIcon={<BoltIcon sx={{ fontSize: '15px !important' }} />} onClick={loadJudgeDemo}
-              sx={{ textTransform: 'none', borderRadius: '6px', background: '#f59e0b', color: '#fff', fontWeight: 600, '&:hover': { background: '#d97706' }, boxShadow: 'none' }}>
+              sx={{ textTransform: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#fff', fontWeight: 700, px: 2.2, boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>
               Test Evaluation Flow
             </Button>
           </Box>
@@ -140,7 +150,7 @@ export const DriftEventsPage: React.FC = () => {
       )}
 
       {/* Events list */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mb: 3.5 }}>
         {displayed.map(event => {
           const isExpanded = Boolean(expandedDiffs[event.eventId]);
           const currentTool = tools.find(t => t.id === event.toolId || t.name === event.toolName);
@@ -155,24 +165,26 @@ export const DriftEventsPage: React.FC = () => {
               variant="outlined"
               sx={{
                 p: 2.5,
-                borderRadius: 2,
+                borderRadius: '12px',
                 backgroundColor: surface,
                 borderColor: event.status === 'open' && event.severity === 'high' ? 'rgba(244, 63, 94, 0.35)' : border,
-                borderLeft: event.status === 'open' ? `4px solid ${event.severity === 'high' ? '#f43f5e' : '#f59e0b'}` : `4px solid #10b981`
+                borderLeft: event.status === 'open' ? `4px solid ${event.severity === 'high' ? '#e11d48' : '#d97706'}` : `4px solid #059669`,
+                boxShadow: isDark ? 'none' : '0 1px 3px rgba(15,23,42,0.03), 0 4px 14px -2px rgba(15,23,42,0.04)',
+                transition: 'all 0.18s ease'
               }}
             >
               {/* Event header */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                  <Typography sx={{ fontWeight: 700, fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: '0.95rem', color: 'text.primary' }}>
+                  <Typography sx={{ fontWeight: 800, fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: '0.96rem', color: 'text.primary' }}>
                     {event.toolName}
                   </Typography>
                   <StatusBadge status={event.severity} />
                   {event.status !== 'open' && (
-                    <Chip label="RESOLVED" size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981', borderRadius: '4px' }} />
+                    <Chip label="RESOLVED" size="small" sx={{ height: 21, fontSize: '0.66rem', fontWeight: 750, backgroundColor: 'rgba(16,185,129,0.1)', color: '#047857', borderRadius: '5px' }} />
                   )}
                 </Box>
-                <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                   Detected at {new Date(event.detectedAt).toLocaleTimeString()}
                 </Typography>
               </Box>
@@ -180,17 +192,17 @@ export const DriftEventsPage: React.FC = () => {
               {/* Changes */}
               <Box sx={{ mb: 2 }}>
                 {event.changes.map((ch, idx) => (
-                  <Box key={idx} sx={{ p: 1.5, mb: 1, backgroundColor: codeBg, borderRadius: 1.5, border: `1px solid ${border}` }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>
-                        PROPERTY DRIFT: <code style={{ color: isDark ? '#60a5fa' : '#2563eb', fontWeight: 700 }}>{ch.path}</code>
+                  <Box key={idx} sx={{ p: 1.8, mb: 1.25, backgroundColor: codeBg, borderRadius: '8px', border: `1px solid ${border}` }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 750, letterSpacing: '0.03em' }}>
+                        PROPERTY DRIFT: <code style={{ color: isDark ? '#60a5fa' : '#0284c7', fontWeight: 750, background: isDark ? 'rgba(96,165,250,0.1)' : 'rgba(2,132,199,0.08)', padding: '2px 6px', borderRadius: '4px' }}>{ch.path}</code>
                       </Typography>
-                      <Chip label={ch.type.toUpperCase()} size="small" sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, borderRadius: '4px' }} />
+                      <Chip label={ch.type.toUpperCase()} size="small" sx={{ height: 19, fontSize: '0.63rem', fontWeight: 750, borderRadius: '4px', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0', color: 'text.secondary' }} />
                     </Box>
-                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 550, mb: 0.25 }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 650, mb: 0.5 }}>
                       {ch.reason}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.5 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.55 }}>
                       <strong>Impact:</strong> {ch.whyItMatters}
                     </Typography>
                   </Box>
@@ -210,14 +222,14 @@ export const DriftEventsPage: React.FC = () => {
               </Collapse>
 
               {/* Actions toolbar */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: `1px solid ${border}`, flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1.25, borderTop: `1px solid ${border}`, flexWrap: 'wrap', gap: 1 }}>
                 <Button
                   size="small"
                   variant="text"
                   startIcon={<CodeIcon sx={{ fontSize: '15px !important' }} />}
                   endIcon={isExpanded ? <KeyboardArrowUpIcon sx={{ fontSize: '16px !important' }} /> : <KeyboardArrowDownIcon sx={{ fontSize: '16px !important' }} />}
                   onClick={() => toggleDiff(event.eventId)}
-                  sx={{ textTransform: 'none', fontSize: '0.78rem', color: 'text.secondary', fontWeight: 600 }}
+                  sx={{ textTransform: 'none', fontSize: '0.8rem', color: 'text.secondary', fontWeight: 650, '&:hover': { color: 'text.primary' } }}
                 >
                   {isExpanded ? 'Hide Raw Diff' : 'Inspect Raw Diff'}
                 </Button>
@@ -228,9 +240,9 @@ export const DriftEventsPage: React.FC = () => {
                     onClick={() => setSelectedEvent({ eventId: event.eventId, toolId: event.toolId })}
                     variant="contained"
                     color="primary"
-                    sx={{ textTransform: 'none', fontSize: '0.8rem', fontWeight: 700, borderRadius: '6px', px: 2 }}
+                    sx={{ textTransform: 'none', fontSize: '0.82rem', fontWeight: 700, borderRadius: '8px', px: 2.2, py: 0.6 }}
                   >
-                    Accept & Freeze New Baseline
+                    Accept &amp; Freeze New Baseline
                   </Button>
                 )}
               </Box>
