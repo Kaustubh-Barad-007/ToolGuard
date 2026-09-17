@@ -88,7 +88,7 @@ export const IdeConnectPage: React.FC = () => {
       const content = ev.target?.result as string;
       setJsonText(content);
       try {
-        const parsed = JSON.parse(content);
+        const parsed = JSON.parse(content.replace(/^\uFEFF/, '').trim());
         if (parsed.projectId && !projectName) setProjectName(parsed.projectId);
         setImportError(null);
       } catch { setImportError('Invalid JSON file.'); }
@@ -100,7 +100,7 @@ export const IdeConnectPage: React.FC = () => {
     setImportError(null);
     if (!jsonText.trim()) { setImportError('Paste or upload your baseline.json.'); return; }
     try {
-      const parsed = JSON.parse(jsonText);
+      const parsed = JSON.parse(jsonText.replace(/^\uFEFF/, '').trim());
       const ok = importWorkspaceBaseline(parsed, projectName.trim() || undefined);
       if (ok) { setImportSuccess(true); setTimeout(() => navigate('/dashboard'), 800); }
       else     { setImportError('Invalid baseline format. Must contain a "tools" object.'); }

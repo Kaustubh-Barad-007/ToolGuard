@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { ToolDefinition } from '@toolguard/shared';
+import { ToolDefinition, stripBom } from '@toolguard/shared';
 import { ToolAdapter } from './adapter.js';
 
 const CANDIDATE_MCP_FILES = (workspacePath: string) => [
@@ -35,7 +35,8 @@ export class McpToolAdapter implements ToolAdapter {
 
     for (const file of CANDIDATE_MCP_FILES(workspacePath)) {
       try {
-        const content = await fs.readFile(file, 'utf8');
+        const raw = await fs.readFile(file, 'utf8');
+        const content = stripBom(raw).trim();
         const parsed = JSON.parse(content);
         const servers = parsed.mcpServers || parsed.servers || {};
 

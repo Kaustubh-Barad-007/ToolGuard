@@ -284,7 +284,8 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Import any external project baseline (with optional live tools)
   const importWorkspaceBaseline = (baselineData: any, customName?: string, customTools?: ToolDefinition[]): boolean => {
     try {
-      const parsed: Baseline = typeof baselineData === 'string' ? JSON.parse(baselineData) : baselineData;
+      const cleanData = typeof baselineData === 'string' ? baselineData.replace(/^\uFEFF/, '').trim() : baselineData;
+      const parsed: Baseline = typeof cleanData === 'string' ? JSON.parse(cleanData) : cleanData;
       if (!parsed || !parsed.tools || typeof parsed.tools !== 'object') {
         throw new Error('Invalid baseline JSON format: missing tools map');
       }

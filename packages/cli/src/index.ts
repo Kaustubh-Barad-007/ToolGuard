@@ -9,7 +9,7 @@ import {
   discoverWorkspaceTools,
   FileBaselineStorage
 } from '@toolguard/core/node';
-import { ToolDefinition, ScanResult, RiskSeverity } from '@toolguard/shared';
+import { ToolDefinition, ScanResult, RiskSeverity, stripBom } from '@toolguard/shared';
 
 const program = new Command();
 
@@ -102,7 +102,7 @@ fi
         let currentSettings: any = {};
         try {
           const existing = await fs.readFile(settingsPath, 'utf8');
-          currentSettings = JSON.parse(existing);
+          currentSettings = JSON.parse(stripBom(existing).trim());
         } catch {}
         currentSettings['toolguard.scanOnSave'] = true;
         await fs.writeFile(settingsPath, JSON.stringify(currentSettings, null, 2), 'utf8');
@@ -476,7 +476,8 @@ program
       // 4. Clean up .vscode/settings.json if toolguard setting exists
       const settingsPath = path.join(cwd, '.vscode', 'settings.json');
       try {
-        const settings = JSON.parse(await fs.readFile(settingsPath, 'utf8'));
+        const settingsRaw = await fs.readFile(settingsPath, 'utf8');
+        const settings = JSON.parse(stripBom(settingsRaw).trim());
         if (settings['toolguard.scanOnSave'] !== undefined) {
           delete settings['toolguard.scanOnSave'];
           if (Object.keys(settings).length === 0) {
@@ -673,7 +674,8 @@ program
         if (!file.endsWith('.json')) continue;
         const filePath = path.join(toolsDir, file);
         try {
-          const content = JSON.parse(await fs.readFile(filePath, 'utf8'));
+          const rawFile = await fs.readFile(filePath, 'utf8');
+          const content = JSON.parse(stripBom(rawFile).trim());
           if (Array.isArray(content)) {
             const filtered = content.filter((t: any) =>
               (t.id || t.name)?.toLowerCase() !== toolName.toLowerCase() &&
@@ -709,7 +711,8 @@ program
     if (targetScript) {
       const pkgPath = path.join(cwd, 'package.json');
       try {
-        const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
+        const rawPkg = await fs.readFile(pkgPath, 'utf8');
+        const pkg = JSON.parse(stripBom(rawPkg).trim());
         if (pkg.scripts && pkg.scripts[targetScript]) {
           delete pkg.scripts[targetScript];
           await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');

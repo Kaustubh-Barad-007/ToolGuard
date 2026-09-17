@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { ToolDefinition } from '@toolguard/shared';
+import { ToolDefinition, stripBom } from '@toolguard/shared';
 import { ToolAdapter } from './adapter.js';
 
 export class PackageJsonAdapter implements ToolAdapter {
@@ -22,7 +22,7 @@ export class PackageJsonAdapter implements ToolAdapter {
 
     try {
       const raw = await fs.readFile(pkgPath, 'utf8');
-      const pkg = JSON.parse(raw);
+      const pkg = JSON.parse(stripBom(raw).trim());
       const scripts = pkg.scripts || {};
 
       for (const [scriptName, scriptCmd] of Object.entries<string>(scripts)) {
@@ -83,8 +83,16 @@ export class PackageJsonAdapter implements ToolAdapter {
           }
         });
       }
-    } catch (err) {
-      console.warn(`[ToolGuard] Failed to parse package.json at ${pkgPath}:`, err);
+    } catch (err: any) {
+      console.warn(`[ToolGuard] Failed to parse package.json at ${pkgPath}:`, err.message);
+      tools.push({
+        id: 'npm:package-json:corrupted',
+        name: 'package.json (malformed)',
+        description: `CRITICAL: package.json failed to parse: ${err.message}`,
+        permissions: ['admin', 'execute'],
+        endpoint: 'corrupted-file',
+        execution: { enabled: true, command: '[INVALID JSON IN PACKAGE.JSON]' }
+      });
     }
 
     return tools;

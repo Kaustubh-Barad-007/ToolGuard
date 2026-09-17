@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { ToolDefinition } from '@toolguard/shared';
+import { ToolDefinition, stripBom } from '@toolguard/shared';
 import { ToolAdapter } from './adapter.js';
 
 export class GenericJsonAdapter implements ToolAdapter {
@@ -60,25 +60,44 @@ export class GenericJsonAdapter implements ToolAdapter {
           if (!file.endsWith('.json')) continue;
           const fullPath = path.join(dir, file);
           try {
-            const content = await fs.readFile(fullPath, 'utf8');
+            const raw = await fs.readFile(fullPath, 'utf8');
+            const content = stripBom(raw).trim();
             const parsed = JSON.parse(content);
             if (Array.isArray(parsed)) {
               for (const item of parsed) {
-                if (item && typeof item === 'object' && item.name) {
+                if (item && typeof item === 'object') {
+                  const toolName = item.name || item.id || path.basename(file, '.json');
                   tools.push({
-                    id: item.id || item.name,
+                    id: item.id || toolName,
+                    name: toolName,
                     ...item
                   });
                 }
               }
-            } else if (parsed && typeof parsed === 'object' && parsed.name) {
+            } else if (parsed && typeof parsed === 'object') {
+              const toolName = parsed.name || parsed.id || path.basename(file, '.json');
               tools.push({
-                id: parsed.id || parsed.name,
+                id: parsed.id || toolName,
+                name: toolName,
                 ...parsed
               });
             }
-          } catch (e) {
-            console.warn(`[ToolGuard] Failed to parse tool file ${fullPath}:`, e);
+          } catch (e: any) {
+            // Do not silently swallow parse errors; register as high-risk corrupted tool
+            const baseName = path.basename(file, '.json');
+            tools.push({
+              id: `corrupted:${baseName}`,
+              name: `corrupted:${baseName}`,
+              description: `CRITICAL: Tool definition ${file} failed to parse or is malformed (${e.message})`,
+              permissions: ['admin', 'execute', 'network'],
+              endpoint: 'corrupted-file',
+              execution: {
+                enabled: true,
+                command: `[MALFORMED JSON IN ${file}]`,
+                isolated: false
+              }
+            });
+            console.warn(`[ToolGuard] Registered corrupted tool file ${fullPath}:`, e.message);
           }
         }
       } catch {
@@ -93,17 +112,27 @@ export class GenericJsonAdapter implements ToolAdapter {
 
     for (const file of singleFiles) {
       try {
-        const content = await fs.readFile(file, 'utf8');
+        const raw = await fs.readFile(file, 'utf8');
+        const content = stripBom(raw).trim();
         const parsed = JSON.parse(content);
         if (Array.isArray(parsed)) {
           for (const item of parsed) {
-            if (item && typeof item === 'object' && item.name) {
+            if (item && typeof item === 'object') {
+              const toolName = item.name || item.id || path.basename(file, '.json');
               tools.push({
-                id: item.id || item.name,
+                id: item.id || toolName,
+                name: toolName,
                 ...item
               });
             }
           }
+        } else if (parsed && typeof parsed === 'object') {
+          const toolName = parsed.name || parsed.id || path.basename(file, '.json');
+          tools.push({
+            id: parsed.id || toolName,
+            name: toolName,
+            ...parsed
+          });
         }
       } catch {
         // File does not exist or unreadable

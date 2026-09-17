@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { Baseline, DEFAULT_PATHS } from '@toolguard/shared';
+import { Baseline, DEFAULT_PATHS, stripBom } from '@toolguard/shared';
 
 export class FileBaselineStorage {
   /**
@@ -10,7 +10,7 @@ export class FileBaselineStorage {
     const target = path.join(workspacePath, DEFAULT_PATHS.BASELINE_FILE);
     try {
       const content = await fs.readFile(target, 'utf8');
-      return JSON.parse(content) as Baseline;
+      return JSON.parse(stripBom(content).trim()) as Baseline;
     } catch {
       return null;
     }

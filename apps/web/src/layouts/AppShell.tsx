@@ -98,7 +98,7 @@ export const AppShell: React.FC = () => {
       const content = event.target?.result as string;
       setImportJsonText(content);
       try {
-        const parsed = JSON.parse(content);
+        const parsed = JSON.parse(content.replace(/^\uFEFF/, '').trim());
         if (parsed.projectId && !importProjectName) setImportProjectName(parsed.projectId);
         setImportError(null);
       } catch {
@@ -112,7 +112,7 @@ export const AppShell: React.FC = () => {
     setImportError(null);
     if (!importJsonText.trim()) { setImportError('Please paste or upload a baseline.json.'); return; }
     try {
-      const parsed = JSON.parse(importJsonText);
+      const parsed = JSON.parse(importJsonText.replace(/^\uFEFF/, '').trim());
       const success = importWorkspaceBaseline(parsed, importProjectName.trim() || undefined);
       if (success) {
         setImportDialogOpen(false);

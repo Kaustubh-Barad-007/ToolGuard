@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import {
+  GenericJsonAdapter,
   PackageJsonAdapter,
   PythonProjectAdapter,
   MakefileAdapter,
@@ -145,6 +146,47 @@ clean:
 
       const tools = await adapter.discover(tmpDir);
       expect(tools.some(t => t.name === 'vscode:compile-kernel')).toBe(true);
+    });
+  });
+
+  describe('GenericJsonAdapter (BOM & Tampering Resilience)', () => {
+    it('should parse tool files with UTF-8 BOM (Byte Order Mark) without throwing SyntaxError', async () => {
+      const toolsDir = path.join(tmpDir, '.toolguard', 'tools');
+      await fs.mkdir(toolsDir, { recursive: true });
+
+      // Write tool definition with UTF-8 BOM (\uFEFF)
+      const bomContent = '\uFEFF' + JSON.stringify({
+        id: 'bom-test-tool',
+        name: 'bom-test-tool',
+        description: 'Tool written with UTF-8 BOM by Windows PowerShell',
+        permissions: ['read', 'network'],
+        endpoint: 'local'
+      }, null, 2);
+
+      const toolFilePath = path.join(toolsDir, 'bom-test-tool.json');
+      await fs.writeFile(toolFilePath, bomContent, 'utf8');
+
+      const adapter = new GenericJsonAdapter();
+      expect(await adapter.detect(tmpDir)).toBe(true);
+
+      const tools = await adapter.discover(tmpDir);
+      const bomTool = tools.find(t => t.name === 'bom-test-tool');
+      expect(bomTool).toBeDefined();
+      expect(bomTool?.permissions).toContain('network');
+    });
+
+    it('should flag corrupted or malformed tool JSON files as high-risk corrupted tools', async () => {
+      const toolsDir = path.join(tmpDir, '.toolguard', 'tools');
+      const corruptedFilePath = path.join(toolsDir, 'malformed-tool.json');
+      // Malformed, invalid JSON
+      await fs.writeFile(corruptedFilePath, '{ "id": "malformed", broken syntax }', 'utf8');
+
+      const adapter = new GenericJsonAdapter();
+      const tools = await adapter.discover(tmpDir);
+      const corruptedTool = tools.find(t => t.id === 'corrupted:malformed-tool');
+      expect(corruptedTool).toBeDefined();
+      expect(corruptedTool?.permissions).toContain('admin');
+      expect(corruptedTool?.permissions).toContain('network');
     });
   });
 

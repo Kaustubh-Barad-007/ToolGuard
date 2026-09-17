@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { ToolDefinition } from '@toolguard/shared';
+import { ToolDefinition, stripBom } from '@toolguard/shared';
 import { ToolAdapter } from './adapter.js';
 
 export class VSCodeTasksAdapter implements ToolAdapter {
@@ -22,8 +22,8 @@ export class VSCodeTasksAdapter implements ToolAdapter {
 
     try {
       const content = await fs.readFile(tasksFile, 'utf8');
-      // Clean comments if JSON with comments (jsonc)
-      const cleanJson = content.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+      // Clean comments if JSON with comments (jsonc) and strip BOM
+      const cleanJson = stripBom(content).replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').trim();
       const parsed = JSON.parse(cleanJson);
       const tasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
 
