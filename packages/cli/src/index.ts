@@ -161,24 +161,29 @@ program
         return scanResult;
       }
 
-      console.log('Trust drift detected.\n');
+      console.log('🚨 UNAUTHORIZED CAPABILITY DRIFT DETECTED!\n');
 
       for (const t of scanResult.tools.filter(tool => tool.driftDetected)) {
-        console.log(`${t.name}`);
+        console.log(`▸ Tool: ${t.name} [Status: ${t.status}]`);
         for (const ch of t.changes) {
           const beforeStr = JSON.stringify(ch.before) || 'none';
           const afterStr = JSON.stringify(ch.after) || 'none';
-          console.log(`  ${ch.path}: ${beforeStr} → ${afterStr}`);
+          console.log(`  - ${ch.path}: ${beforeStr} → ${afterStr}`);
+          if (ch.reason) {
+            console.log(`    Reason: ${ch.reason}`);
+          }
         }
-        console.log(`  Risk: ${t.status}\n`);
+        console.log('');
       }
 
       const topDrift = scanResult.tools.find(t => t.driftDetected);
+      console.log('Actionable Commands:');
       if (topDrift) {
-        console.log('Run:');
-        console.log(`  toolguard explain ${topDrift.name}`);
-        console.log(`  toolguard dashboard  (open visual diff on Web UI)\n`);
+        console.log(`  • toolguard explain ${topDrift.name}   (inspect security risk breakdown)`);
       }
+      console.log(`  • toolguard remove <toolName>        (completely delete drifted tool)`);
+      console.log(`  • toolguard dashboard                (open visual diff on Web UI)`);
+      console.log(`  • toolguard baseline                 (approve changes & re-freeze baseline)\n`);
 
       return scanResult;
     };
@@ -187,7 +192,17 @@ program
       const initialResult = await doScan();
       if (!initialResult) process.exit(2);
 
-      if (options.web) {
+      // If threat/drift detected and project baseline is connected, automatically sync & open dashboard
+      if (initialResult.driftCount > 0) {
+        const baseline = await FileBaselineStorage.loadLocalBaseline(cwd);
+        if (baseline && !options.ci) {
+          console.log(`🔗 Project "${baseline.projectId}" is connected.`);
+          console.log('✓ Automatically updating live drift state on ToolGuard Dashboard...\n');
+          await openDashboard(cwd);
+        } else if (options.web) {
+          await openDashboard(cwd);
+        }
+      } else if (options.web) {
         await openDashboard(cwd);
       }
 
@@ -408,6 +423,7 @@ async function openDashboard(cwd: string) {
     // Fallback gracefully
   }
 
+  console.log(`🔗 Dashboard: ${targetUrl}`);
   console.log(`Opening ToolGuard Dashboard in browser...`);
   const platform = process.platform;
   const cmd = platform === 'win32'

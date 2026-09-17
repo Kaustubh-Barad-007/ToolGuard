@@ -4,7 +4,8 @@ import {
   DriftEvent,
   AuditEvent,
   ToolScanStatus,
-  ToolDefinition
+  ToolDefinition,
+  ScanResult
 } from '@toolguard/shared';
 import { BaselineManager } from '@toolguard/core';
 
@@ -36,7 +37,7 @@ interface DemoContextType {
   disconnectProject: () => void;
   loadJudgeDemo: () => void;
   exitJudgeDemo: () => void;
-  triggerScan: () => Promise<void>;
+  triggerScan: () => Promise<ScanResult | null>;
   acceptDriftEvent: (eventId: string, toolId: string) => Promise<void>;
   createNewBaseline: () => Promise<void>;
   simulateDrift: () => Promise<void>;
@@ -510,19 +511,58 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Run Scan
-  const triggerScan = async () => {
+  const triggerScan = async (): Promise<ScanResult | null> => {
     setLastScanTime('Just now');
     if (tools.length > 0 && baseline && baseline.baselineId !== 'bl-empty') {
       const res = BaselineManager.compare(tools, baseline);
       setScanStatuses(res.tools);
+      const detected = res.tools.filter(t => t.driftDetected);
+      if (detected.length > 0) {
+        const events: DriftEvent[] = detected.map(d => ({
+          eventId: `drift-${Date.now()}-${d.toolId}`,
+          projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
+          toolId: d.toolId,
+          toolName: d.name,
+          baselineId: baseline.baselineId,
+          scanId: `scan-${Date.now()}`,
+          detectedAt: new Date().toISOString(),
+          status: 'open',
+          severity: d.status === 'HIGH RISK' ? 'high' : 'medium',
+          changes: d.changes
+        }));
+        setDriftEvents(events);
+        const audit: AuditEvent = {
+          auditId: `audit-${Date.now()}`,
+          action: 'DRIFT_DETECTED',
+          actorId: 'system',
+          projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
+          timestamp: new Date().toISOString(),
+          metadata: { details: `Verification scan detected ${detected.length} unauthorized capability drift(s).` }
+        };
+        setAuditLogs(prev => [audit, ...prev]);
+        return res;
+      } else {
+        setDriftEvents([]);
+        const audit: AuditEvent = {
+          auditId: `audit-${Date.now()}`,
+          action: 'SCAN_COMPLETED',
+          actorId: 'system',
+          projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
+          timestamp: new Date().toISOString(),
+          metadata: { details: `Verification scan completed: all ${tools.length} tools verified against SHA-256 baseline (SAFE).` }
+        };
+        setAuditLogs(prev => [audit, ...prev]);
+        return res;
+      }
     }
+    return null;
   };
 
   // Accept drift and update baseline
   const acceptDriftEvent = async (eventId: string, toolId: string) => {
     setDriftEvents(prev => prev.map(e => e.eventId === eventId ? { ...e, status: 'resolved' as const } : e));
     const projectId = activeWorkspace ? activeWorkspace.id : 'demo-project';
-    const newBl = BaselineManager.createBaseline(tools, projectId, 'judge@hackathon.dev', baseline.version + 1);
+    const newBl = BaselineManager.createBaseline(tools, projectId, 'developer@workspace.local', baseline.version + 1);
     setBaseline(newBl);
 
     if (activeWorkspace) {
@@ -533,7 +573,7 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Create new baseline
   const createNewBaseline = async () => {
     const projectId = activeWorkspace ? activeWorkspace.id : 'demo-project';
-    const newBl = BaselineManager.createBaseline(tools, projectId, 'judge@hackathon.dev', baseline.version + 1);
+    const newBl = BaselineManager.createBaseline(tools, projectId, 'developer@workspace.local', baseline.version + 1);
     setBaseline(newBl);
     setDriftEvents([]);
     if (activeWorkspace) {
@@ -564,6 +604,37 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     setTools(updated);
     setLastScanTime('Just now');
+
+    // Immediately evaluate drift and surface alert
+    if (baseline && baseline.baselineId !== 'bl-empty') {
+      const res = BaselineManager.compare(updated, baseline);
+      setScanStatuses(res.tools);
+      const detected = res.tools.filter(t => t.driftDetected);
+      if (detected.length > 0) {
+        const events: DriftEvent[] = detected.map(d => ({
+          eventId: `drift-${Date.now()}-${d.toolId}`,
+          projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
+          toolId: d.toolId,
+          toolName: d.name,
+          baselineId: baseline.baselineId,
+          scanId: `scan-${Date.now()}`,
+          detectedAt: new Date().toISOString(),
+          status: 'open',
+          severity: d.status === 'HIGH RISK' ? 'high' : 'medium',
+          changes: d.changes
+        }));
+        setDriftEvents(events);
+        const audit: AuditEvent = {
+          auditId: `audit-${Date.now()}`,
+          action: 'DRIFT_DETECTED',
+          actorId: 'simulator',
+          projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
+          timestamp: new Date().toISOString(),
+          metadata: { details: `Unauthorized capability expansion injected on "${target.name}".` }
+        };
+        setAuditLogs(prev => [audit, ...prev]);
+      }
+    }
   };
 
   // Reset to baseline
@@ -572,10 +643,36 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setTools(DEMO_TOOLS);
       setBaseline(DEMO_BASELINE);
       setDriftEvents([]);
-    } else if (activeWorkspace) {
-      setTools(activeWorkspace.tools);
+    } else if (activeWorkspace && activeWorkspace.baseline) {
+      // Reconstitute clean tools from baseline definitions
+      const cleanTools: ToolDefinition[] = Object.values(activeWorkspace.baseline.tools).map(entry => {
+        const norm = entry.normalizedDefinition;
+        return {
+          id: entry.toolId,
+          name: entry.name,
+          description: norm?.description || entry.name,
+          version: norm?.version || '1.0.0',
+          permissions: norm?.permissions || [],
+          endpoint: norm?.endpoint || 'local',
+          execution: norm?.execution || { enabled: false },
+          metadata: entry.metadata || {}
+        };
+      });
+
+      setTools(cleanTools);
       setBaseline(activeWorkspace.baseline);
       setDriftEvents([]);
+      const res = BaselineManager.compare(cleanTools, activeWorkspace.baseline);
+      setScanStatuses(res.tools);
+      const audit: AuditEvent = {
+        auditId: `audit-${Date.now()}`,
+        action: 'BASELINE_UPDATED',
+        actorId: 'developer',
+        projectId: activeWorkspace.id,
+        timestamp: new Date().toISOString(),
+        metadata: { details: `Workspace restored to trusted cryptographic baseline.` }
+      };
+      setAuditLogs(prev => [audit, ...prev]);
     }
   };
 

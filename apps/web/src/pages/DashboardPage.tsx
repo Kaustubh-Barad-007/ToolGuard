@@ -64,14 +64,44 @@ export const DashboardPage: React.FC = () => {
   const [showGuide, setShowGuide] = useState(false);
   const [toolToDelete, setToolToDelete] = useState<ToolScanStatus | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [scanFeedback, setScanFeedback] = useState<{ severity: 'error' | 'success'; message: string } | null>(null);
 
   const openDrift = driftEvents.filter(e => e.status === 'open');
   const isProtected = openDrift.length === 0;
 
   const handleScan = async () => {
     setScanning(true);
-    await triggerScan();
+    const result = await triggerScan();
     setScanning(false);
+    if (result) {
+      if (result.driftCount > 0) {
+        setScanFeedback({
+          severity: 'error',
+          message: `🚨 Drift Detected! ${result.driftCount} tool(s) have unauthorized capability drift and do not match the trusted baseline.`
+        });
+      } else {
+        setScanFeedback({
+          severity: 'success',
+          message: `✓ Verification Scan Passed: All ${result.totalTools} tool(s) match the trusted SHA-256 cryptographic baseline (SAFE).`
+        });
+      }
+    }
+  };
+
+  const handleSimulate = async () => {
+    await simulateDrift();
+    setScanFeedback({
+      severity: 'error',
+      message: '🚨 Simulated Threat Injected: Unauthorized capability expansion detected. Status updated to TRUST DRIFT.'
+    });
+  };
+
+  const handleReset = async () => {
+    await resetToBaseline();
+    setScanFeedback({
+      severity: 'success',
+      message: '✓ Cryptographic baseline restored. All tools are verified and safe.'
+    });
   };
 
   const handleCopyCmd = (cmd: string) => {
@@ -183,28 +213,63 @@ export const DashboardPage: React.FC = () => {
             sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: border, color: 'text.secondary', '&:hover': { borderColor: 'text.primary', color: 'text.primary' } }}>
             {showGuide ? 'Hide Guide' : 'How It Works'}
           </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<PlayArrowIcon sx={{ fontSize: '15px !important' }} />}
+            onClick={handleScan}
+            disabled={scanning}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '6px',
+              fontSize: '0.82rem',
+              borderColor: border,
+              color: 'text.primary',
+              '&:hover': { borderColor: 'text.primary' }
+            }}
+          >
+            {scanning ? 'Verifying…' : 'Run Verification Scan'}
+          </Button>
+
           {!isProtected ? (
             <>
-              <Button variant="contained" color="error" size="small" onClick={() => navigate('/drift')}
-                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px', fontSize: '0.82rem', px: 2 }}>
+              <Button
+                variant="contained"
+                color="error"
+                size="small"
+                onClick={() => navigate('/drift')}
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px', fontSize: '0.82rem', px: 2 }}
+              >
                 Review {openDrift.length} Drift Alert{openDrift.length > 1 ? 's' : ''}
               </Button>
-              <Button variant="outlined" size="small" onClick={resetToBaseline}
-                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: border, color: 'text.secondary' }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleReset}
+                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: border, color: 'text.secondary' }}
+              >
                 Restore Baseline
               </Button>
             </>
           ) : (
-            <>
-              <Button variant="outlined" size="small" startIcon={<PlayArrowIcon sx={{ fontSize: '15px !important' }} />} onClick={handleScan} disabled={scanning}
-                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: border, color: 'text.primary', '&:hover': { borderColor: 'text.primary' } }}>
-                {scanning ? 'Verifying…' : 'Run Verification Scan'}
-              </Button>
-              <Button variant="outlined" size="small" startIcon={<BoltIcon sx={{ fontSize: '14px !important', color: '#f59e0b' }} />} onClick={simulateDrift}
-                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem', borderColor: 'rgba(245,158,11,0.4)', color: '#f59e0b', '&:hover': { borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.06)' } }}>
-                Simulate Threat
-              </Button>
-            </>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<BoltIcon sx={{ fontSize: '14px !important', color: '#f59e0b' }} />}
+              onClick={handleSimulate}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: '6px',
+                fontSize: '0.82rem',
+                borderColor: 'rgba(245,158,11,0.4)',
+                color: '#f59e0b',
+                '&:hover': { borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.06)' }
+              }}
+            >
+              Simulate Threat
+            </Button>
           )}
           <Button
             variant="outlined"
@@ -227,6 +292,17 @@ export const DashboardPage: React.FC = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* Verification Scan Feedback Banner */}
+      {scanFeedback && (
+        <Alert
+          severity={scanFeedback.severity}
+          onClose={() => setScanFeedback(null)}
+          sx={{ mb: 2.5, borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem' }}
+        >
+          {scanFeedback.message}
+        </Alert>
+      )}
 
       {/* Interactive Architecture & Educational Guide Card */}
       {showGuide && (
