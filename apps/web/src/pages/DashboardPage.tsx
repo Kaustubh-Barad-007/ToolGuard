@@ -14,6 +14,8 @@ import {
   Alert,
   Tooltip,
   IconButton,
+  TextField,
+  InputAdornment,
   useTheme
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +25,7 @@ import BoltIcon from '@mui/icons-material/Bolt';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
+import SearchIcon from '@mui/icons-material/Search';
 import { useDemoData } from '../context/DemoDataContext';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -44,6 +47,8 @@ export const DashboardPage: React.FC = () => {
 
   const [scanning, setScanning] = useState(false);
   const [copiedCmd, setCopiedCmd] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPermission, setSelectedPermission] = useState<string>('all');
 
   const openDrift = driftEvents.filter(e => e.status === 'open');
   const isProtected = openDrift.length === 0;
@@ -60,9 +65,23 @@ export const DashboardPage: React.FC = () => {
     setTimeout(() => setCopiedCmd(false), 2000);
   };
 
-  const border = isDark ? '#1f2937' : '#e2e8f0';
-  const surface = isDark ? '#111827' : '#ffffff';
-  const surfaceMuted = isDark ? '#0b0f19' : '#f8fafc';
+  const border = isDark ? '#1e2638' : '#e2e8f0';
+  const surface = isDark ? '#0f141f' : '#ffffff';
+  const surfaceMuted = isDark ? '#080b11' : '#f8fafc';
+
+  // ── Filter tools by search & permission boundary ──
+  const filteredTools = scanStatuses.filter(tool => {
+    const toolDef = tools.find(t => (t.id || t.name) === tool.toolId || t.name === tool.name);
+    const matchesQuery =
+      tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (toolDef?.execution?.command && toolDef.execution.command.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    if (!matchesQuery) return false;
+    if (selectedPermission === 'all') return true;
+
+    const perms = toolDef?.permissions || [];
+    return perms.includes(selectedPermission);
+  });
 
   // ── Empty / Not connected state ──────────────────────────────────────────────
   if (!activeWorkspace || scanStatuses.length === 0) {
@@ -70,14 +89,14 @@ export const DashboardPage: React.FC = () => {
 
     return (
       <Box sx={{ maxWidth: 640, mx: 'auto', pt: 6, pb: 4, textAlign: 'center' }}>
-        <Box sx={{ width: 60, height: 60, borderRadius: '16px', background: 'linear-gradient(135deg, #10b981, #059669)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 2.5, boxShadow: '0 8px 24px rgba(16,185,129,0.25)' }}>
-          <ShieldOutlinedIcon sx={{ color: '#fff', fontSize: 32 }} />
+        <Box sx={{ width: 62, height: 62, borderRadius: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', mb: 2.5, boxShadow: '0 8px 24px rgba(16,185,129,0.3)' }}>
+          <ShieldOutlinedIcon sx={{ color: '#fff', fontSize: 34 }} />
         </Box>
         <Typography variant="h5" sx={{ fontWeight: 750, mb: 1, color: 'text.primary', letterSpacing: '-0.02em' }}>
           Connect a Project to ToolGuard
         </Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3.5, lineHeight: 1.6, maxWidth: 500, mx: 'auto' }}>
-          Zero-trust capability verification for developer tools &amp; scripts. Freeze tool definitions into deterministic SHA-256 baselines and detect trust drift before runtime.
+          Zero-trust capability verification for developer tools &amp; AI agents. Freeze tool definitions into deterministic SHA-256 baselines and detect trust drift before runtime.
         </Typography>
 
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap', mb: 4 }}>
@@ -95,7 +114,7 @@ export const DashboardPage: React.FC = () => {
         <Paper variant="outlined" sx={{ p: 2.5, textAlign: 'left', borderRadius: '10px', backgroundColor: surface, borderColor: border }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: '0.04em' }}>
-              TERMINAL 1-LINE SETUP
+              UNIVERSAL CLI INSTALL &amp; INITIALIZE
             </Typography>
             <Tooltip title={copiedCmd ? 'Copied!' : 'Copy Commands'}>
               <IconButton size="small" onClick={() => handleCopyCmd(installScript)} sx={{ color: 'text.secondary' }}>
@@ -111,7 +130,7 @@ export const DashboardPage: React.FC = () => {
     );
   }
 
-  // ── Connected state ─────────────────────────────────────────────────────────
+  // ── Connected state metrics ──
   const stats = [
     { label: 'Monitored Tools', value: scanStatuses.length, sub: 'Active in workspace', accent: '#6366f1' },
     { label: 'Baseline Version', value: `v${baseline?.version || 1}`, sub: 'SHA-256 verified', accent: '#10b981' },
@@ -121,7 +140,7 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <Box sx={{ maxWidth: 1120 }}>
-      {/* Header */}
+      {/* Header Banner */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
@@ -129,7 +148,7 @@ export const DashboardPage: React.FC = () => {
               {activeWorkspace.name}
             </Typography>
             <Chip
-              icon={<Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: isProtected ? '#10b981' : '#f43f5e', boxShadow: isProtected ? '0 0 8px #10b981' : '0 0 8px #f43f5e', mr: 0.5 }} />}
+              icon={<Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: isProtected ? '#10b981' : '#f43f5e', animation: 'statusPulse 2s infinite', mr: 0.5 }} />}
               label={isProtected ? 'CRYPTOGRAPHICALLY PROTECTED' : 'UNAUTHORIZED DRIFT DETECTED'}
               size="small"
               sx={{
@@ -141,7 +160,7 @@ export const DashboardPage: React.FC = () => {
             />
           </Box>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {activeWorkspace.stack} · <strong>{scanStatuses.length} tools</strong> verified against SHA-256 fingerprint
+            {activeWorkspace.stack} · <strong>{scanStatuses.length} tools</strong> verified against SHA-256 cryptographic baseline
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1.25 }}>
@@ -162,13 +181,13 @@ export const DashboardPage: React.FC = () => {
       {/* Drift Alert Banner */}
       {!isProtected && (
         <Alert severity="error" variant="outlined"
-          action={<Button color="error" size="small" onClick={() => navigate('/drift')} sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap' }}>Review Diff &amp; Details →</Button>}
+          action={<Button color="error" size="small" onClick={() => navigate('/drift')} sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap' }}>Inspect Diff &amp; Resolve →</Button>}
           sx={{ mb: 3, borderRadius: '8px', fontSize: '0.84rem', borderColor: 'rgba(244,63,94,0.4)', backgroundColor: isDark ? 'rgba(244,63,94,0.06)' : 'rgba(244,63,94,0.04)' }}>
           <strong>Trust Drift Alert:</strong> Detected {openDrift.length} unauthorized capability alteration(s) violating the baseline fingerprint.
         </Alert>
       )}
 
-      {/* Metrics Row */}
+      {/* Metric Cards Row */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {stats.map((s) => (
           <Grid item xs={6} sm={3} key={s.label}>
@@ -188,11 +207,68 @@ export const DashboardPage: React.FC = () => {
         ))}
       </Grid>
 
+      {/* Capability Search & Filter Toolbar */}
+      <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5, borderRadius: '8px', backgroundColor: surface, borderColor: border, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
+        <TextField
+          size="small"
+          placeholder="Filter tools by name or command..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ fontSize: 17, color: 'text.disabled' }} />
+              </InputAdornment>
+            )
+          }}
+          sx={{
+            width: { xs: '100%', sm: 280 },
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '6px',
+              fontSize: '0.82rem',
+              backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'
+            }
+          }}
+        />
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mr: 0.5, fontSize: '0.72rem' }}>
+            PERMISSION:
+          </Typography>
+          {[
+            { label: 'All', value: 'all' },
+            { label: 'admin', value: 'admin' },
+            { label: 'network', value: 'network' },
+            { label: 'write', value: 'write' },
+            { label: 'execute', value: 'execute' }
+          ].map(filterItem => (
+            <Chip
+              key={filterItem.value}
+              label={filterItem.label}
+              size="small"
+              clickable
+              onClick={() => setSelectedPermission(filterItem.value)}
+              sx={{
+                height: 22,
+                fontSize: '0.7rem',
+                fontWeight: 650,
+                borderRadius: '5px',
+                backgroundColor: selectedPermission === filterItem.value ? (isDark ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.15)') : 'transparent',
+                color: selectedPermission === filterItem.value ? '#10b981' : 'text.secondary',
+                border: selectedPermission === filterItem.value ? '1px solid rgba(16,185,129,0.4)' : `1px solid ${border}`
+              }}
+            />
+          ))}
+        </Box>
+      </Paper>
+
       {/* Tools Capability Manifest Table */}
       <Paper variant="outlined" sx={{ borderRadius: '8px', overflow: 'hidden', backgroundColor: surface, borderColor: border }}>
-        <Box sx={{ px: 2.5, py: 1.75, borderBottom: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ px: 2.5, py: 1.5, borderBottom: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>Tool Capability Manifest</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+              Tool Capability Manifest ({filteredTools.length} tools)
+            </Typography>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>Cryptographic SHA-256 fingerprint &amp; runtime permission boundaries</Typography>
           </Box>
           <Chip label="SHA-256 ZERO-TRUST" size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : 'rgba(16,185,129,0.08)', color: '#10b981' }} />
@@ -208,31 +284,39 @@ export const DashboardPage: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {scanStatuses.map((tool) => {
-              const toolDef = tools.find(t => (t.id || t.name) === tool.toolId || t.name === tool.name);
-              return (
-                <TableRow key={tool.toolId} hover sx={{ '& td': { borderBottom: `1px solid ${border}`, py: 1.25 } }}>
-                  <TableCell sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.84rem', fontFamily: '"JetBrains Mono", ui-monospace, monospace' }}>
-                    {tool.name}
-                  </TableCell>
-                  <TableCell><StatusBadge status={tool.status} /></TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      {toolDef?.permissions?.map((perm: string) => (
-                        <Chip key={perm} label={perm} size="small" sx={{
-                          height: 19, fontSize: '0.67rem', fontWeight: 650, borderRadius: '4px',
-                          backgroundColor: perm === 'admin' ? 'rgba(244,63,94,0.12)' : perm === 'network' ? 'rgba(245,158,11,0.12)' : perm === 'write' ? 'rgba(99,102,241,0.12)' : 'rgba(16,185,129,0.12)',
-                          color: perm === 'admin' ? '#f43f5e' : perm === 'network' ? '#f59e0b' : perm === 'write' ? '#818cf8' : '#10b981',
-                        }} />
-                      )) || <Typography variant="caption" sx={{ color: 'text.disabled' }}>—</Typography>}
-                    </Box>
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: '0.78rem', color: 'text.secondary' }}>
-                    {toolDef?.execution?.command || toolDef?.endpoint || 'static'}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {filteredTools.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
+                  No tools match the selected query.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredTools.map((tool) => {
+                const toolDef = tools.find(t => (t.id || t.name) === tool.toolId || t.name === tool.name);
+                return (
+                  <TableRow key={tool.toolId} hover sx={{ '& td': { borderBottom: `1px solid ${border}`, py: 1.25 } }}>
+                    <TableCell sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.84rem', fontFamily: '"JetBrains Mono", ui-monospace, monospace' }}>
+                      {tool.name}
+                    </TableCell>
+                    <TableCell><StatusBadge status={tool.status} /></TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {toolDef?.permissions?.map((perm: string) => (
+                          <Chip key={perm} label={perm} size="small" sx={{
+                            height: 19, fontSize: '0.67rem', fontWeight: 650, borderRadius: '4px',
+                            backgroundColor: perm === 'admin' ? 'rgba(244,63,94,0.12)' : perm === 'network' ? 'rgba(245,158,11,0.12)' : perm === 'write' ? 'rgba(99,102,241,0.12)' : 'rgba(16,185,129,0.12)',
+                            color: perm === 'admin' ? '#f43f5e' : perm === 'network' ? '#f59e0b' : perm === 'write' ? '#818cf8' : '#10b981',
+                          }} />
+                        )) || <Typography variant="caption" sx={{ color: 'text.disabled' }}>—</Typography>}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: '0.78rem', color: 'text.secondary' }}>
+                      {toolDef?.execution?.command || toolDef?.endpoint || 'static'}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </Paper>

@@ -65,7 +65,6 @@ export const AppShell: React.FC = () => {
 
   const {
     driftEvents,
-    triggerScan,
     workspaces,
     activeWorkspaceId,
     activeWorkspace,
@@ -128,59 +127,84 @@ export const AppShell: React.FC = () => {
     }
   };
 
-  // Trustworthy slate colors
-  const bg       = isDark ? '#0b0f19' : '#f8fafc';
-  const surface  = isDark ? '#111827' : '#ffffff';
-  const border   = isDark ? '#1f2937' : '#e2e8f0';
-  const navHover = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
-  const navActive= isDark ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.09)';
+  // High-authority obsidian palette
+  const bg        = isDark ? '#080b11' : '#f8fafc';
+  const surface   = isDark ? '#0f141f' : '#ffffff';
+  const border    = isDark ? '#1e2638' : '#e2e8f0';
+  const navHover  = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const navActive = isDark ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.09)';
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: surface, borderRight: `1px solid ${border}` }}>
-      {/* Brand */}
+      {/* Brand Header */}
       <Box
-        sx={{ px: 2, py: 1.75, display: 'flex', alignItems: 'center', gap: 1.25, borderBottom: `1px solid ${border}`, cursor: 'pointer' }}
+        sx={{
+          px: 2,
+          py: 1.6,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.25,
+          borderBottom: `1px solid ${border}`,
+          cursor: 'pointer'
+        }}
         onClick={() => navigate('/dashboard')}
       >
-        <Box sx={{ width: 28, height: 28, borderRadius: 1, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <ShieldIcon sx={{ color: '#fff', fontSize: 16 }} />
+        <Box
+          sx={{
+            width: 30,
+            height: 30,
+            borderRadius: 1.5,
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 10px rgba(16, 185, 129, 0.35)'
+          }}
+        >
+          <ShieldIcon sx={{ color: '#fff', fontSize: 17 }} />
         </Box>
-        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.01em', color: 'text.primary' }}>
-          ToolGuard
-        </Typography>
+        <Box>
+          <Typography sx={{ fontWeight: 800, fontSize: '0.96rem', letterSpacing: '-0.02em', color: 'text.primary', lineHeight: 1.1 }}>
+            ToolGuard
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.04em' }}>
+            ZERO-TRUST GUARD
+          </Typography>
+        </Box>
       </Box>
 
-      {/* Nav */}
-      <List sx={{ px: 1, py: 1.25, flexGrow: 1 }}>
+      {/* Navigation items */}
+      <List sx={{ px: 1, py: 1.5, flexGrow: 1 }}>
         {NAV_ITEMS.map((item) => {
           const isSelected = location.pathname === item.path;
           return (
-            <ListItem key={item.path} disablePadding sx={{ mb: 0.25 }}>
+            <ListItem key={item.path} disablePadding sx={{ mb: 0.35 }}>
               <ListItemButton
                 selected={isSelected}
                 onClick={() => { navigate(item.path); if (isMobile) setMobileOpen(false); }}
                 sx={{
-                  borderRadius: '6px',
+                  borderRadius: '7px',
                   py: 0.75,
                   px: 1.25,
-                  minHeight: 34,
+                  minHeight: 36,
                   color: isSelected ? '#10b981' : 'text.secondary',
                   backgroundColor: isSelected ? navActive : 'transparent',
+                  border: isSelected ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid transparent',
                   '&:hover': { backgroundColor: navHover, color: 'text.primary' },
                   '&.Mui-selected': { backgroundColor: navActive },
                   '&.Mui-selected:hover': { backgroundColor: navActive },
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 28, color: 'inherit', '& svg': { fontSize: 17 } }}>
+                <ListItemIcon sx={{ minWidth: 28, color: 'inherit', '& svg': { fontSize: 18 } }}>
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText
                   primary={item.label}
-                  primaryTypographyProps={{ fontSize: '0.84rem', fontWeight: isSelected ? 600 : 400, color: 'inherit' }}
+                  primaryTypographyProps={{ fontSize: '0.84rem', fontWeight: isSelected ? 650 : 500, color: 'inherit' }}
                 />
                 {item.badgeKey === 'drift' && openDriftCount > 0 && (
-                  <Box sx={{ ml: 'auto', minWidth: 18, height: 18, borderRadius: '9px', backgroundColor: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Typography sx={{ fontSize: '0.65rem', color: '#fff', fontWeight: 700, lineHeight: 1 }}>{openDriftCount}</Typography>
+                  <Box sx={{ ml: 'auto', minWidth: 18, height: 18, borderRadius: '9px', backgroundColor: '#f43f5e', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 0.5 }}>
+                    <Typography sx={{ fontSize: '0.65rem', color: '#fff', fontWeight: 750, lineHeight: 1 }}>{openDriftCount}</Typography>
                   </Box>
                 )}
               </ListItemButton>
@@ -189,11 +213,19 @@ export const AppShell: React.FC = () => {
         })}
       </List>
 
-      {/* Version footer */}
-      <Box sx={{ px: 2, py: 1.5, borderTop: `1px solid ${border}` }}>
-        <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.72rem' }}>
-          v1.0.0 · toolguard-app.vercel.app
-        </Typography>
+      {/* Live Security Engine Pill */}
+      <Box sx={{ p: 1.5, borderTop: `1px solid ${border}` }}>
+        <Box sx={{ p: 1.25, borderRadius: '7px', backgroundColor: isDark ? 'rgba(16, 185, 129, 0.06)' : 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
+            <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#10b981', animation: 'statusPulse 2s infinite' }} />
+            <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 750, fontSize: '0.67rem', letterSpacing: '0.04em' }}>
+              SHA-256 ACTIVE
+            </Typography>
+          </Box>
+          <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.68rem', display: 'block' }}>
+            Continuous baseline watch
+          </Typography>
+        </Box>
       </Box>
     </Box>
   );
@@ -213,27 +245,27 @@ export const AppShell: React.FC = () => {
         }}
       >
         <Toolbar variant="dense" sx={{ justifyContent: 'space-between', px: { xs: 2, md: 2.5 }, minHeight: '48px !important' }}>
-          {/* Left */}
+          {/* Left: Mobile Toggle & Workspace Pill */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {isMobile && (
               <IconButton size="small" onClick={() => setMobileOpen(!mobileOpen)} sx={{ color: 'text.primary', mr: 0.5 }}>
                 <MenuIcon fontSize="small" />
               </IconButton>
             )}
-            {/* Workspace selector */}
+
             <Button
               size="small"
               onClick={(e) => setWorkspaceMenuAnchor(e.currentTarget)}
               endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 15 }} />}
               sx={{
                 py: 0.4, px: 1.25, borderRadius: '6px',
-                backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
                 border: `1px solid ${border}`,
-                color: 'text.secondary',
+                color: 'text.primary',
                 textTransform: 'none',
-                fontWeight: 500,
+                fontWeight: 600,
                 fontSize: '0.82rem',
-                '&:hover': { backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', color: 'text.primary' },
+                '&:hover': { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' },
               }}
             >
               <ShieldIcon sx={{ fontSize: 14, color: '#10b981', mr: 0.75 }} />
@@ -241,29 +273,48 @@ export const AppShell: React.FC = () => {
             </Button>
           </Box>
 
-          {/* Right */}
+          {/* Right: Engine Indicator, Judge Demo & Theme Toggle */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box
+              sx={{
+                display: { xs: 'none', sm: 'flex' },
+                alignItems: 'center',
+                gap: 0.75,
+                px: 1.25,
+                py: 0.35,
+                borderRadius: '6px',
+                backgroundColor: isDark ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.25)'
+              }}
+            >
+              <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#10b981', animation: 'statusPulse 2s infinite' }} />
+              <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#10b981', letterSpacing: '0.04em' }}>
+                ZERO-TRUST GUARD
+              </Typography>
+            </Box>
+
             <Button
               size="small"
               variant="contained"
               startIcon={<BoltIcon sx={{ fontSize: '14px !important' }} />}
               onClick={handleJudgeDemoClick}
               sx={{
-                background: '#f59e0b',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                 color: '#fff',
-                fontWeight: 600,
+                fontWeight: 700,
                 fontSize: '0.78rem',
                 textTransform: 'none',
                 px: 1.5,
                 py: 0.4,
                 borderRadius: '6px',
-                boxShadow: 'none',
-                '&:hover': { background: '#d97706', boxShadow: 'none' },
+                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+                '&:hover': { background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', boxShadow: 'none' },
               }}
             >
-              Demo
+              ⚡ 1-Click Demo
             </Button>
-            <Tooltip title={isDark ? 'Light mode' : 'Dark mode'}>
+
+            <Tooltip title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
               <IconButton size="small" onClick={toggleTheme} sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
                 {isDark ? <Brightness7Icon sx={{ fontSize: 18 }} /> : <Brightness4Icon sx={{ fontSize: 18 }} />}
               </IconButton>
@@ -272,19 +323,19 @@ export const AppShell: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      {/* Workspace Menu */}
+      {/* Workspace Selector Menu */}
       <Menu
         anchorEl={workspaceMenuAnchor}
         open={Boolean(workspaceMenuAnchor)}
         onClose={() => setWorkspaceMenuAnchor(null)}
         PaperProps={{
-          sx: { backgroundColor: surface, border: `1px solid ${border}`, minWidth: 240, borderRadius: '8px', boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.5)' : '0 8px 24px rgba(0,0,0,0.12)', py: 0.5 }
+          sx: { backgroundColor: surface, border: `1px solid ${border}`, minWidth: 240, borderRadius: '8px', boxShadow: isDark ? '0 12px 32px rgba(0,0,0,0.6)' : '0 8px 24px rgba(0,0,0,0.12)', py: 0.5 }
         }}
       >
         {workspaces.length > 0 && (
           <Box sx={{ px: 1.5, pt: 0.75, pb: 0.25 }}>
-            <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 600, fontSize: '0.7rem', letterSpacing: '0.05em' }}>
-              WORKSPACES
+            <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, fontSize: '0.68rem', letterSpacing: '0.06em' }}>
+              PROJECT WORKSPACES
             </Typography>
           </Box>
         )}
@@ -297,10 +348,10 @@ export const AppShell: React.FC = () => {
               sx={{ py: 0.75, px: 1.5, borderRadius: '6px', mx: 0.5, display: 'flex', justifyContent: 'space-between', gap: 1, backgroundColor: isCurrent ? (isDark ? 'rgba(16,185,129,0.08)' : 'rgba(16,185,129,0.06)') : 'transparent' }}
             >
               <Box>
-                <Typography variant="body2" sx={{ fontWeight: isCurrent ? 600 : 400, color: 'text.primary', fontSize: '0.84rem' }}>
+                <Typography variant="body2" sx={{ fontWeight: isCurrent ? 700 : 400, color: 'text.primary', fontSize: '0.84rem' }}>
                   {ws.name}
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.72rem' }}>{ws.tools.length} tools</Typography>
+                <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.72rem' }}>{ws.tools.length} tools monitored</Typography>
               </Box>
               {isCurrent && <CheckIcon sx={{ fontSize: 16, color: '#10b981' }} />}
             </MenuItem>
@@ -316,7 +367,7 @@ export const AppShell: React.FC = () => {
 
         <MenuItem onClick={() => { setWorkspaceMenuAnchor(null); navigate('/integrations'); }} sx={{ py: 0.75, px: 1.5, borderRadius: '6px', mx: 0.5, gap: 1.25 }}>
           <AddCircleOutlineIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-          <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.84rem' }}>Connect new project</Typography>
+          <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.84rem' }}>Connect new project (CLI / IDE)</Typography>
         </MenuItem>
 
         {activeWorkspace && (
@@ -328,29 +379,29 @@ export const AppShell: React.FC = () => {
 
         {activeWorkspace && (
           <MenuItem onClick={() => { setWorkspaceMenuAnchor(null); disconnectProject(); }} sx={{ py: 0.75, px: 1.5, borderRadius: '6px', mx: 0.5, gap: 1.25 }}>
-            <LinkOffIcon sx={{ fontSize: 16, color: '#ef4444' }} />
-            <Typography variant="body2" sx={{ color: '#ef4444', fontSize: '0.84rem' }}>Disconnect project</Typography>
+            <LinkOffIcon sx={{ fontSize: 16, color: '#f43f5e' }} />
+            <Typography variant="body2" sx={{ color: '#f43f5e', fontSize: '0.84rem', fontWeight: 600 }}>Disconnect project</Typography>
           </MenuItem>
         )}
       </Menu>
 
-      {/* Import Dialog */}
+      {/* Import Baseline Dialog */}
       <Dialog
         open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { backgroundColor: surface, border: `1px solid ${border}`, borderRadius: '12px' } }}
+        PaperProps={{ sx: { backgroundColor: surface, border: `1px solid ${border}`, borderRadius: '10px' } }}
       >
-        <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem', pb: 0.5 }}>Import Project Baseline</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 750, fontSize: '1.05rem', pb: 0.5 }}>Import Project Baseline</DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2, lineHeight: 1.6 }}>
             Run <code>toolguard init -y</code> then <code>toolguard export</code> in your project, then paste the output below.
           </Typography>
           {importError && <Alert severity="error" sx={{ mb: 2, borderRadius: '6px' }}>{importError}</Alert>}
-          <TextField label="Project Name (optional)" placeholder="e.g. my-backend" value={importProjectName} onChange={(e) => setImportProjectName(e.target.value)} fullWidth size="small" sx={{ mb: 2 }} />
+          <TextField label="Project Name (optional)" placeholder="e.g. backend-api" value={importProjectName} onChange={(e) => setImportProjectName(e.target.value)} fullWidth size="small" sx={{ mb: 2 }} />
           <Button variant="outlined" component="label" startIcon={<FileUploadOutlinedIcon />} size="small" sx={{ textTransform: 'none', mb: 1.5, borderRadius: '6px' }}>
-            Upload baseline.json
+            Upload baseline.json file
             <input type="file" accept=".json" hidden onChange={handleFileUpload} />
           </Button>
           <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>Or paste JSON directly:</Typography>
@@ -358,13 +409,13 @@ export const AppShell: React.FC = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={() => setImportDialogOpen(false)} sx={{ textTransform: 'none', color: 'text.secondary' }}>Cancel</Button>
-          <Button variant="contained" onClick={handleExecuteImport} sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px' }}>
-            Import & Protect
+          <Button variant="contained" onClick={handleExecuteImport} sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px' }}>
+            Import &amp; Protect
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Sidebar Drawer */}
+      {/* Sidebar Navigation */}
       <Box component="nav" sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}>
         {isMobile ? (
           <Drawer variant="temporary" open={mobileOpen} onClose={() => setMobileOpen(false)} ModalProps={{ keepMounted: true }}
@@ -378,16 +429,16 @@ export const AppShell: React.FC = () => {
         )}
       </Box>
 
-      {/* Main Content */}
+      {/* Main Content Area */}
       <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 2.5, md: 3 }, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` }, mt: '48px', minHeight: 'calc(100vh - 48px)' }}>
         {isJudgeDemoActive && (
           <Alert
             severity="warning"
             icon={<BoltIcon sx={{ color: '#f59e0b', fontSize: 18 }} />}
-            action={<Button color="inherit" size="small" onClick={exitJudgeDemo} sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.78rem' }}>Exit</Button>}
+            action={<Button color="inherit" size="small" onClick={exitJudgeDemo} sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.78rem' }}>Exit Demo</Button>}
             sx={{ mb: 2.5, borderRadius: '8px', border: '1px solid rgba(245,158,11,0.35)', backgroundColor: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.10)', fontSize: '0.84rem' }}
           >
-            <strong>Judge Demo active</strong> — unauthorized capability expansion simulated on <code>npm:dev</code>.
+            <strong>⚡ Hackathon Judge Demo Active:</strong> Simulated capability expansion on <code>npm:dev</code> (unauthorized network egress &amp; debug privileges).
           </Alert>
         )}
         <Outlet />
