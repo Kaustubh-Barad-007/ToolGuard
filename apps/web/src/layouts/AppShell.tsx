@@ -44,7 +44,6 @@ import CheckIcon from '@mui/icons-material/Check';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import { useDemoData } from '../context/DemoDataContext';
 import { useThemeMode } from '../context/ThemeModeContext';
 
@@ -52,10 +51,9 @@ const DRAWER_WIDTH = 240;
 
 const NAV_GROUPS = [
   {
-    title: 'OVERVIEW',
+    title: 'MONITORING',
     items: [
-      { label: 'About & Pitch', path: '/', icon: <ShieldOutlinedIcon sx={{ fontSize: 18 }} /> },
-      { label: 'Live Console', path: '/dashboard', icon: <DashboardOutlinedIcon sx={{ fontSize: 18 }} /> },
+      { label: 'Overview', path: '/dashboard', icon: <DashboardOutlinedIcon sx={{ fontSize: 18 }} /> },
       { label: 'Drift Incidents', path: '/drift', icon: <WarningAmberIcon sx={{ fontSize: 18 }} />, badgeKey: 'drift' },
     ]
   },
@@ -178,7 +176,7 @@ export const AppShell: React.FC = () => {
       {/* Brand & Workspace Switcher Header */}
       <Box sx={{ p: 2, borderBottom: `1px solid ${borderCol}` }}>
         <Box
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/dashboard')}
           sx={{ display: 'flex', alignItems: 'center', gap: 1.25, cursor: 'pointer', mb: 2 }}
         >
           <Box
@@ -268,7 +266,7 @@ export const AppShell: React.FC = () => {
             </Typography>
             <List disablePadding>
               {group.items.map((item) => {
-                const isSelected = location.pathname === item.path || (item.path === '/' && location.pathname === '/overview');
+                const isSelected = location.pathname === item.path || (item.path === '/dashboard' && location.pathname === '/');
                 return (
                   <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
                     <ListItemButton
@@ -390,11 +388,11 @@ export const AppShell: React.FC = () => {
             )}
 
             <Typography sx={{ fontSize: '0.78rem', color: textMuted, fontWeight: 500 }}>
-              {location.pathname === '/' || location.pathname === '/overview' ? 'ToolGuard' : 'Projects'}
+              Projects
             </Typography>
             <Typography sx={{ fontSize: '0.78rem', color: textMuted }}>/</Typography>
             <Typography sx={{ fontSize: '0.82rem', color: textHeader, fontWeight: 650 }}>
-              {location.pathname === '/' || location.pathname === '/overview' ? 'About & Architecture' : (activeWorkspace?.name || 'Workspace')}
+              {activeWorkspace?.name || 'Workspace'}
             </Typography>
           </Box>
 
