@@ -34,5 +34,8 @@ Thumbs.db
 # Vercel
 .vercel
 
-# ToolGuard local data
-.toolguard/
+# ToolGuard runtime files
+.toolguard/*.log
+.toolguard/*.pid
+.toolguard/daemon.log
+.toolguard/daemon.pid
