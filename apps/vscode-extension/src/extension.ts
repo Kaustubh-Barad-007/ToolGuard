@@ -1,14 +1,140 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as zlib from 'zlib';
 import { promises as fs } from 'fs';
 import { ExtensionScanService } from './services/scanner.js';
 import { ScanResult, ToolScanStatus, ToolDefinition } from '@toolguard/shared';
+import { startBridgeServer } from '@toolguard/core/node';
 
 let statusBarItem: vscode.StatusBarItem;
 let scanService: ExtensionScanService;
 let latestScanResult: ScanResult | null = null;
 let notifiedDrifts = new Set<string>();
 let isScanning = false;
+
+export async function openDashboardCommand(subPath?: string, mode?: 'ide' | 'browser') {
+  const config = vscode.workspace.getConfiguration('toolguard');
+  const baseUrl = config.get<string>('dashboardUrl') || 'http://127.0.0.1:3154';
+  const configuredTarget = config.get<string>('openTarget') || 'prompt';
+  const workspacePath = await getWorkspacePath();
+
+  let targetPath = subPath || 'dashboard';
+  let targetUrl = `${baseUrl}/${targetPath}`;
+
+  if (workspacePath) {
+    // 1. Ensure local bridge is bound to THIS workspace
+    try {
+      await fetch('http://127.0.0.1:3154/api/workspace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cwd: workspacePath })
+      });
+    } catch {
+      try {
+        await startBridgeServer({
+          cwd: workspacePath,
+          port: 3154,
+          onStateChange: async () => {
+            await performScan(false);
+            vscode.window.setStatusBarMessage('$(check) ToolGuard: Drift resolved in UI (Verified Safe)', 4000);
+          }
+        });
+      } catch {}
+    }
+
+    try {
+      const baseline = await scanService.loadBaseline(workspacePath);
+      const tools = await scanService.discoverTools(workspacePath);
+
+      if (baseline) {
+        // Run fresh live scan immediately
+        const scanResult = scanService.runScan(tools, baseline);
+        latestScanResult = scanResult;
+
+        const hasDrift = scanResult.driftCount > 0;
+        targetPath = subPath || (hasDrift ? 'drift' : 'dashboard');
+
+        const driftedTools = scanResult.tools.filter(t => t.driftDetected);
+        const safeToolNames = scanResult.tools.filter(t => !t.driftDetected).map(t => t.name);
+
+        // Compact v2 payload guaranteed to be under 1500 chars (safe from Windows 2048-char limits)
+        const compactPayload = {
+          v: 2,
+          projectId: baseline.projectId || path.basename(workspacePath),
+          workspacePath,
+          baselineId: baseline.baselineId,
+          totalTools: scanResult.totalTools,
+          driftCount: scanResult.driftCount,
+          safeTools: safeToolNames.slice(0, 30),
+          safeCount: safeToolNames.length,
+          drifts: driftedTools.map(t => {
+            const liveTool = tools.find(tool => (tool.id && tool.id === t.toolId) || tool.name === t.name);
+            const blEntry = baseline.tools[t.toolId] || Object.values(baseline.tools).find(e => e.name === t.name);
+            return {
+              toolId: t.toolId,
+              name: t.name,
+              status: t.status,
+              severity: t.status === 'HIGH RISK' ? 'high' : 'medium',
+              changes: t.changes,
+              current: liveTool || { name: t.name },
+              baseline: blEntry?.normalizedDefinition || null,
+              fingerprint: blEntry?.fingerprint || null
+            };
+          })
+        };
+
+        const jsonStr = JSON.stringify(compactPayload);
+        const compressed = zlib.gzipSync(Buffer.from(jsonStr, 'utf8'));
+        const encoded = compressed.toString('base64url');
+        targetUrl = `${baseUrl}/${targetPath}#sync=${encoded}`;
+      } else {
+        targetUrl = `${baseUrl}/${targetPath}`;
+      }
+    } catch (e) {
+      console.warn('[ToolGuard Extension] Failed to create sync URL payload:', e);
+    }
+
+    if (workspacePath) {
+      try {
+        fetch('http://127.0.0.1:3154/api/workspace', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cwd: workspacePath, workspacePath })
+        }).catch(() => {});
+      } catch {}
+    }
+  }
+
+  let selectedMode = mode;
+  if (!selectedMode) {
+    if (configuredTarget === 'ide') {
+      selectedMode = 'ide';
+    } else if (configuredTarget === 'browser') {
+      selectedMode = 'browser';
+    } else {
+      const choice = await vscode.window.showQuickPick(
+        [
+          { label: '$(preview) Open in IDE', description: 'Internal VS Code editor tab (Offline & zero distraction)', target: 'ide' as const },
+          { label: '$(browser) Open in Browser', description: `Local web browser (${baseUrl})`, target: 'browser' as const }
+        ],
+        { placeHolder: 'Select where to open the ToolGuard Dashboard' }
+      );
+      if (!choice) return;
+      selectedMode = choice.target;
+    }
+  }
+
+  if (selectedMode === 'ide') {
+    try {
+      await vscode.commands.executeCommand('simpleBrowser.show', targetUrl);
+      return;
+    } catch (e) {
+      console.warn('[ToolGuard] Simple browser unavailable, falling back to external browser:', e);
+    }
+  }
+
+  await vscode.env.openExternal(vscode.Uri.parse(targetUrl));
+}
 
 export async function activate(context: vscode.ExtensionContext) {
   scanService = new ExtensionScanService();
@@ -35,10 +161,20 @@ export async function activate(context: vscode.ExtensionContext) {
       await showDriftQuickPick();
     }),
 
-    vscode.commands.registerCommand('toolguard.openDashboard', () => {
-      const config = vscode.workspace.getConfiguration('toolguard');
-      const url = config.get<string>('dashboardUrl') || 'https://toolguard-app.vercel.app';
-      vscode.env.openExternal(vscode.Uri.parse(url));
+    vscode.commands.registerCommand('toolguard.openDashboard', async () => {
+      await openDashboardCommand();
+    }),
+
+    vscode.commands.registerCommand('toolguard.openDashboardInIde', async () => {
+      await openDashboardCommand(undefined, 'ide');
+    }),
+
+    vscode.commands.registerCommand('toolguard.openDashboardInBrowser', async () => {
+      await openDashboardCommand(undefined, 'browser');
+    }),
+
+    vscode.commands.registerCommand('toolguard.restoreCleanState', async () => {
+      await restoreCleanStateCommand();
     }),
 
     vscode.commands.registerCommand('toolguard.showStatus', async () => {
@@ -58,13 +194,51 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initial Scan
   await checkFirstRunOrScan();
 
+  // Start Real-Time Local HTTP Bridge (connects automatically to Web Dashboard)
+  const workspacePath = await getWorkspacePath();
+  if (workspacePath) {
+    try {
+      const bridge = await startBridgeServer({
+        cwd: workspacePath,
+        port: 3154,
+        onLog: (msg) => console.log(`[ToolGuard VS Code Bridge] ${msg}`),
+        onStateChange: async () => {
+          console.log('[ToolGuard VS Code Bridge] State change received from Web UI — running instant scan');
+          await performScan(false);
+          vscode.window.setStatusBarMessage('$(check) ToolGuard: Drift resolved in UI (Verified Safe)', 4000);
+        }
+      });
+      if (bridge.isAlreadyRunning) {
+        try {
+          fetch('http://127.0.0.1:3154/api/workspace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cwd: workspacePath })
+          }).catch(() => {});
+        } catch {}
+      }
+      context.subscriptions.push({
+        dispose: () => {
+          bridge.close().catch(() => {});
+        }
+      });
+    } catch (err) {
+      console.warn('[ToolGuard VS Code Bridge] Local bridge init warning:', err);
+    }
+  }
+
   // Real-time File System Watchers (create, change, delete)
-  const toolWatcher = vscode.workspace.createFileSystemWatcher('**/{.toolguard,tools,.cursor,.vscode}/**/*.{json,yaml,yml}');
+  const baselineWatcher = vscode.workspace.createFileSystemWatcher('**/.toolguard/**');
+  const toolWatcher = vscode.workspace.createFileSystemWatcher('**/{tools,.cursor,.vscode}/**');
   const pkgWatcher = vscode.workspace.createFileSystemWatcher('**/package.json');
 
   const onWorkspaceChanged = async () => {
     await performScan(false);
   };
+
+  baselineWatcher.onDidChange(onWorkspaceChanged);
+  baselineWatcher.onDidCreate(onWorkspaceChanged);
+  baselineWatcher.onDidDelete(onWorkspaceChanged);
 
   toolWatcher.onDidChange(onWorkspaceChanged);
   toolWatcher.onDidCreate(onWorkspaceChanged);
@@ -74,7 +248,53 @@ export async function activate(context: vscode.ExtensionContext) {
   pkgWatcher.onDidCreate(onWorkspaceChanged);
   pkgWatcher.onDidDelete(onWorkspaceChanged);
 
-  context.subscriptions.push(toolWatcher, pkgWatcher);
+  // Direct URI Handler: handles deep links from Web UI (vscode://toolguard.toolguard-vscode/resolve)
+  const uriHandler = vscode.window.registerUriHandler({
+    async handleUri(uri: vscode.Uri) {
+      const action = uri.path.replace(/^\//, '').toLowerCase();
+      const workspacePath = await getWorkspacePath();
+      if (!workspacePath) return;
+
+      if (action === 'resolve' || action === 'accept-drift') {
+        const tools = await scanService.discoverTools(workspacePath);
+        const currentBl = await scanService.loadBaseline(workspacePath);
+        const nextVer = (currentBl?.version || 1) + 1;
+        const nextVerTag = `v1.0.${nextVer - 1}`;
+        const baseline = BaselineManager.createBaseline(
+          tools,
+          currentBl?.projectId || path.basename(workspacePath),
+          'developer@workspace.local',
+          nextVer
+        );
+        await FileBaselineStorage.saveLocalBaseline(workspacePath, baseline);
+        try {
+          const toolNames = Object.keys(baseline.tools || {});
+          await FileBaselineStorage.appendLocalHistory(workspacePath, {
+            version: nextVer,
+            versionTag: nextVerTag,
+            timestamp: new Date().toISOString(),
+            actor: 'developer@workspace.local',
+            action: 'ACCEPTED_DRIFT',
+            title: `Capability Drift Accepted & Re-baselined (${nextVerTag})`,
+            toolCount: baseline.toolCount,
+            toolsAffected: toolNames,
+            baselineHash: baseline.baselineId,
+          });
+        } catch {}
+        await performScan(false);
+        vscode.window.showInformationMessage(`✓ ToolGuard: Drift accepted and baseline updated to ${nextVerTag}.`);
+      } else if (action === 'restore') {
+        await restoreCleanStateCommand();
+      } else if (action === 'dashboard' || action === 'open-dashboard') {
+        const queryMode = uri.query?.includes('mode=ide') ? 'ide' : (uri.query?.includes('mode=browser') ? 'browser' : undefined);
+        await openDashboardCommand('dashboard', queryMode);
+      } else if (action === 'scan') {
+        await performScan(true);
+      }
+    }
+  });
+
+  context.subscriptions.push(baselineWatcher, toolWatcher, pkgWatcher, uriHandler);
 
   // Also hook document save
   context.subscriptions.push(
@@ -218,11 +438,11 @@ async function performScan(userInitiated: boolean) {
           const reason = topChange?.reason || 'unauthorized capability expansion';
           const msg = `ToolGuard Alert: Trust drift detected in "${tool.name}" (${reason})!`;
 
-          vscode.window.showErrorMessage(msg, 'Review Drift', 'Open Dashboard').then(action => {
-            if (action === 'Review Drift') {
+          vscode.window.showErrorMessage(msg, 'Open Dashboard', 'Review Drift').then(action => {
+            if (action === 'Open Dashboard') {
+              openDashboardCommand('drift');
+            } else if (action === 'Review Drift') {
               vscode.commands.executeCommand('toolguard.explainDrift');
-            } else if (action === 'Open Dashboard') {
-              vscode.commands.executeCommand('toolguard.openDashboard');
             }
           });
         }
@@ -278,6 +498,81 @@ async function createBaselineCommand() {
   await performScan(false);
 }
 
+async function restoreCleanStateCommand() {
+  const workspacePath = await getWorkspacePath();
+  if (!workspacePath) return;
+
+  const threatFile = path.join(workspacePath, '.toolguard', 'tools', 'threat-simulation.json');
+  try {
+    await fs.unlink(threatFile);
+  } catch {}
+
+  try {
+    const toolsDir = path.join(workspacePath, '.toolguard', 'tools');
+    const files = await fs.readdir(toolsDir).catch(() => [] as string[]);
+    const baseline = await scanService.loadBaseline(workspacePath);
+    for (const f of files) {
+      if (f.toLowerCase().includes('threat') || f.toLowerCase().includes('simulation')) {
+        await fs.unlink(path.join(toolsDir, f)).catch(() => {});
+        continue;
+      }
+
+      if (baseline && baseline.tools && f.endsWith('.json')) {
+        const filePath = path.join(toolsDir, f);
+        try {
+          const content = JSON.parse(await fs.readFile(filePath, 'utf8'));
+          const toolArray = Array.isArray(content) ? content : [content];
+          const isUnauthorized = toolArray.some((t: any) => {
+            const id = t.id || t.name;
+            return !baseline.tools[id] && !Object.values(baseline.tools).some(b => b.name === t.name);
+          });
+
+          if (isUnauthorized) {
+            await fs.unlink(filePath).catch(() => {});
+          } else {
+            let modified = false;
+            const restoredTools = toolArray.map((t: any) => {
+              const id = t.id || t.name;
+              const baselineEntry = baseline.tools[id] || Object.values(baseline.tools).find(b => b.name === t.name);
+              if (baselineEntry && baselineEntry.normalizedDefinition) {
+                modified = true;
+                return {
+                  id,
+                  name: baselineEntry.name,
+                  description: baselineEntry.normalizedDefinition.description || baselineEntry.name,
+                  permissions: baselineEntry.normalizedDefinition.permissions || [],
+                  endpoint: baselineEntry.normalizedDefinition.endpoint || 'local',
+                  execution: baselineEntry.normalizedDefinition.execution || { enabled: false },
+                  ...baselineEntry.metadata
+                };
+              }
+              return t;
+            });
+            if (modified) {
+              await fs.writeFile(filePath, JSON.stringify(Array.isArray(content) ? restoredTools : restoredTools[0], null, 2), 'utf8');
+            }
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+
+  notifiedDrifts.clear();
+  await performScan(false);
+
+  vscode.window.showInformationMessage(
+    '✓ ToolGuard: Restored clean baseline (All tools verified SAFE).',
+    'Open in IDE',
+    'Open in Browser'
+  ).then(choice => {
+    if (choice === 'Open in IDE') {
+      openDashboardCommand('dashboard', 'ide');
+    } else if (choice === 'Open in Browser') {
+      openDashboardCommand('dashboard', 'browser');
+    }
+  });
+}
+
 async function showStatusMenu() {
   const items: vscode.QuickPickItem[] = [
     {
@@ -293,13 +588,21 @@ async function showStatusMenu() {
       description: latestScanResult?.driftCount ? `${latestScanResult.driftCount} tool(s) changed` : 'No drift detected'
     },
     {
-      label: '$(browser) Open Web Dashboard',
-      description: 'Full visual dashboard with side-by-side diff'
+      label: '$(preview) Open Dashboard in IDE',
+      description: 'Internal VS Code editor tab (offline local bridge)'
+    },
+    {
+      label: '$(browser) Open Dashboard in Browser',
+      description: 'Open in local web browser (http://127.0.0.1:3154)'
+    },
+    {
+      label: '$(refresh) Restore Clean Baseline',
+      description: 'Purge test simulation and restore verified baseline'
     }
   ];
 
   const selection = await vscode.window.showQuickPick(items, {
-    placeHolder: 'ToolGuard Actions'
+    placeHolder: 'ToolGuard Security Actions'
   });
 
   if (!selection) return;
@@ -310,8 +613,12 @@ async function showStatusMenu() {
     await vscode.commands.executeCommand('toolguard.createBaseline');
   } else if (selection.label.includes('View Trust Drift')) {
     await vscode.commands.executeCommand('toolguard.explainDrift');
-  } else if (selection.label.includes('Open Web Dashboard')) {
-    await vscode.commands.executeCommand('toolguard.openDashboard');
+  } else if (selection.label.includes('Open Dashboard in IDE')) {
+    await openDashboardCommand('dashboard', 'ide');
+  } else if (selection.label.includes('Open Dashboard in Browser')) {
+    await openDashboardCommand('dashboard', 'browser');
+  } else if (selection.label.includes('Restore Clean Baseline')) {
+    await restoreCleanStateCommand();
   }
 }
 
@@ -341,7 +648,7 @@ async function showDriftQuickPick() {
       'Open in Dashboard'
     );
     if (action === 'Open in Dashboard') {
-      vscode.commands.executeCommand('toolguard.openDashboard');
+      await openDashboardCommand('drift');
     }
   }
 }

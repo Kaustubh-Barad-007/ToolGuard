@@ -2,6 +2,10 @@
 
 <div align="center">
 
+<p align="center">
+  <img src="logo.png" alt="ToolGuard Shield Emblem" width="160" style="border-radius: 12px;" />
+</p>
+
 > **"You trusted the tool. Did the tool stay the same?"**
 
 [![CI](https://github.com/Kaustubh-Barad-007/ToolGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaustubh-Barad-007/ToolGuard/actions)
@@ -143,13 +147,14 @@ ToolGuard/
 ├── apps/
 │   ├── vscode-extension/      # Extension for VS Code, Cursor & Windsurf
 │   └── web/                   # Modern React 18 + Vite + MUI Dashboard
+├── docs/                      # Technical architecture, security, deployment & pitch guide
 ├── packages/
 │   ├── shared/                # Shared TypeScript types, schemas & constants
 │   ├── core/                  # Core cryptographic hashing, normalizer & risk rules
 │   └── cli/                   # Standalone terminal CLI executable
-├── tests/                     # Vitest test suite (13/13 passing)
+├── tests/                     # Vitest test suite (16/16 passing)
 ├── demo/                      # Deterministic evaluation test fixtures
-├── scripts/                   # Local build helper scripts
+├── scripts/                   # Local build and packaging helper scripts
 ├── package.json
 ├── pnpm-workspace.yaml
 ├── tsconfig.json
@@ -205,6 +210,16 @@ Integrate ToolGuard directly into your GitHub Actions pipeline to block pull req
 - **Zero-Telemetry**: ToolGuard does not transmit source code, files, or telemetry to external servers.
 - **Automatic Redaction**: Sensitive authorization headers and credentials (`apiKey`, `password`, `token`, `secret`) are masked with `[REDACTED]` prior to hashing.
 - **Deterministic**: Tool normalizer sorts object keys and normalizes line endings, preventing false drift alerts caused by formatting differences.
+
+---
+
+## 📚 Documentation
+
+Detailed technical documentation and presentation guides are available in [`docs/`](docs/):
+- **[System Architecture](docs/architecture.md)**: Data flow, canonical normalization, and AST differ.
+- **[Deployment & Distribution](docs/deployment.md)**: Production hosting, Vercel deployments, and binary packaging.
+- **[Security Policy](docs/security.md)**: Zero-trust model and vulnerability reporting.
+- **[Live Demo & Pitch Script](docs/demo-guide.md)**: 3-minute presentation script and feature matrix.
 
 ---
 

@@ -9,3 +9,4 @@ export * from './discovery/vscode-tasks-adapter.js';
 export * from './discovery/workflow-adapter.js';
 export * from './discovery/universal.js';
 export * from './storage/file-storage.js';
+export * from './bridge/server.js';

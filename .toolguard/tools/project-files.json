@@ -1,6 +1,8 @@
 {
+  "id": "project-files",
   "name": "project-files",
   "description": "Read project files",
+  "version": "1.0.0",
   "permissions": [
     "read"
   ],

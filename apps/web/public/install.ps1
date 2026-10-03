@@ -4,7 +4,15 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host ""
-Write-Host "  🛡️   ToolGuard Installer" -ForegroundColor Cyan
+Write-Host "               /\_____/\               " -ForegroundColor Cyan
+Write-Host "              /  \   /  \              " -ForegroundColor Cyan
+Write-Host "             / /\ \ / /\ \             " -ForegroundColor Cyan
+Write-Host "            | |  \ V /  | |            " -ForegroundColor Blue
+Write-Host "            | |  /   \  | |            " -ForegroundColor Blue
+Write-Host "             \ \/ / \ \/ /             " -ForegroundColor DarkCyan
+Write-Host "              \  /   \  /              " -ForegroundColor DarkCyan
+Write-Host "               \/_____\/               " -ForegroundColor DarkCyan
+Write-Host "         🛡️   T O O L G U A R D        " -ForegroundColor Green
 Write-Host "  ──────────────────────────────────────────" -ForegroundColor DarkGray
 Write-Host "  Zero-Trust Capability Security for AI Tools" -ForegroundColor Gray
 Write-Host ""

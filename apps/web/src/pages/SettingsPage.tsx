@@ -3,29 +3,24 @@ import {
   Box,
   Typography,
   Paper,
-  Grid,
   FormControlLabel,
   Switch,
   Select,
   MenuItem,
   Button,
   Alert,
-  Divider,
-  useTheme
+  useTheme,
 } from '@mui/material';
-import CheckIcon from '@mui/icons-material/Check';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import PolicyOutlinedIcon from '@mui/icons-material/PolicyOutlined';
 import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
-import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
-import { useDemoData } from '../context/DemoDataContext';
 
 export const SettingsPage: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const { isJudgeDemoActive, loadJudgeDemo, exitJudgeDemo, resetToBaseline } = useDemoData();
 
   const [failOn, setFailOn] = useState('high');
-  const [scanFreq, setScanFreq] = useState('5');
+  const [scanFreq, setScanFreq] = useState('2500');
   const [vscodeNotify, setVscodeNotify] = useState(true);
   const [saved, setSaved] = useState(false);
 
@@ -34,252 +29,197 @@ export const SettingsPage: React.FC = () => {
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const border       = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
-  const surface      = isDark ? '#0d1117' : '#ffffff';
-  const surfaceMuted = isDark ? '#080c10' : '#f6f8fa';
-  const accent       = isDark ? '#00d4aa' : '#008b72';
-  const textMuted    = isDark ? '#8b949e' : '#57606a';
+  const border    = isDark ? '#2E2E2E' : '#E5E7EB';
+  const surface   = isDark ? '#1C1C1C' : '#FFFFFF';
+  const surfaceBg = isDark ? '#171717' : '#F9FAFB';
+  const accent    = isDark ? '#3ECF8E' : '#00C475';
+  const textMuted = isDark ? '#9E9E9E' : '#6B7280';
+
+  const SettingRow = ({
+    label,
+    description,
+    control,
+  }: {
+    label: string;
+    description: string;
+    control: React.ReactNode;
+  }) => (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 2,
+        py: 2,
+        '&:not(:last-child)': { borderBottom: `1px solid ${border}` },
+        flexWrap: 'wrap',
+      }}
+    >
+      <Box sx={{ flex: 1, minWidth: 180 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.86rem', mb: 0.25 }}>
+          {label}
+        </Typography>
+        <Typography variant="caption" sx={{ color: textMuted, fontSize: '0.78rem', lineHeight: 1.5 }}>
+          {description}
+        </Typography>
+      </Box>
+      <Box sx={{ flexShrink: 0 }}>{control}</Box>
+    </Box>
+  );
 
   return (
-    <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+    <Box sx={{ maxWidth: 680, mx: 'auto' }}>
+
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 3.5 }}>
         <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', letterSpacing: '-0.02em' }}>
           Settings
         </Typography>
         <Typography variant="body2" sx={{ color: textMuted, mt: 0.25 }}>
-          Configure CI gate thresholds, verification intervals, and threat simulation sandboxes.
+          Configure how ToolGuard monitors and alerts your workspace.
         </Typography>
       </Box>
 
+      {/* Save success */}
       {saved && (
         <Alert
           severity="success"
-          sx={{
-            mb: 2.5,
-            borderRadius: '6px',
-            fontSize: '0.82rem',
-          }}
+          icon={<CheckCircleOutlineIcon fontSize="small" />}
+          sx={{ mb: 2.5, borderRadius: '8px', fontSize: '0.84rem', border: `1px solid ${isDark ? 'rgba(62,207,142,0.3)' : '#A7F3D0'}`, backgroundColor: isDark ? 'rgba(62,207,142,0.08)' : '#ECFDF5' }}
         >
-          Settings updated successfully.
+          Preferences saved successfully.
         </Alert>
       )}
 
-      {/* 1. Scan & CI Gate Policy */}
+      {/* Security Policy */}
       <Paper
         variant="outlined"
-        sx={{
-          p: 3,
-          mb: 2.5,
-          borderRadius: '10px',
-          backgroundColor: surface,
-          borderColor: border,
-        }}
+        sx={{ p: 3, mb: 2, borderRadius: '8px', backgroundColor: surface, borderColor: border }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.5 }}>
           <PolicyOutlinedIcon sx={{ color: accent, fontSize: 20 }} />
           <Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.92rem' }}>
-              Verification &amp; CI Gate Policy
+              Security Policy
             </Typography>
             <Typography variant="caption" sx={{ color: textMuted }}>
-              Automated rules for pipeline gating and local background checks
+              Rules for when ToolGuard should alert and block pipelines
             </Typography>
           </Box>
         </Box>
 
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, display: 'block', mb: 0.75, fontSize: '0.74rem' }}>
-              CI GATE FAIL THRESHOLD
-            </Typography>
+        <SettingRow
+          label="CI gate — fail on severity"
+          description="ToolGuard will fail your CI/CD pipeline if a tool drift reaches this severity level."
+          control={
             <Select
-              fullWidth
               size="small"
               value={failOn}
               onChange={(e) => setFailOn(e.target.value)}
               sx={{
-                borderRadius: '6px',
+                minWidth: 220,
+                borderRadius: '7px',
                 fontSize: '0.82rem',
-                backgroundColor: surfaceMuted,
-                '& fieldset': { borderColor: border }
+                backgroundColor: surfaceBg,
+                '& fieldset': { borderColor: border },
               }}
             >
-              <MenuItem value="high" sx={{ fontSize: '0.82rem' }}>High severity alterations only</MenuItem>
-              <MenuItem value="medium" sx={{ fontSize: '0.82rem' }}>Medium &amp; high severity alterations</MenuItem>
-              <MenuItem value="low" sx={{ fontSize: '0.82rem' }}>Strict mode (any manifest change)</MenuItem>
+              <MenuItem value="high" sx={{ fontSize: '0.82rem' }}>🔴 High severity only</MenuItem>
+              <MenuItem value="medium" sx={{ fontSize: '0.82rem' }}>🟠 Medium & high severity</MenuItem>
+              <MenuItem value="low" sx={{ fontSize: '0.82rem' }}>🟡 Any change (strict)</MenuItem>
             </Select>
-          </Grid>
+          }
+        />
 
-          <Grid item xs={12} sm={6}>
-            <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, display: 'block', mb: 0.75, fontSize: '0.74rem' }}>
-              BACKGROUND CHECK INTERVAL
-            </Typography>
+        <SettingRow
+          label="Background scan interval"
+          description="How often ToolGuard silently re-scans your project in the background."
+          control={
             <Select
-              fullWidth
               size="small"
               value={scanFreq}
               onChange={(e) => setScanFreq(e.target.value)}
               sx={{
-                borderRadius: '6px',
+                minWidth: 220,
+                borderRadius: '7px',
                 fontSize: '0.82rem',
-                backgroundColor: surfaceMuted,
-                '& fieldset': { borderColor: border }
+                backgroundColor: surfaceBg,
+                '& fieldset': { borderColor: border },
               }}
             >
-              <MenuItem value="1" sx={{ fontSize: '0.82rem' }}>Every 1 minute</MenuItem>
-              <MenuItem value="5" sx={{ fontSize: '0.82rem' }}>Every 5 minutes (standard)</MenuItem>
-              <MenuItem value="15" sx={{ fontSize: '0.82rem' }}>Every 15 minutes</MenuItem>
-              <MenuItem value="manual" sx={{ fontSize: '0.82rem' }}>Manual scan only</MenuItem>
+              <MenuItem value="2500" sx={{ fontSize: '0.82rem' }}>Every 2.5 seconds (real-time)</MenuItem>
+              <MenuItem value="5000" sx={{ fontSize: '0.82rem' }}>Every 5 seconds (standard)</MenuItem>
+              <MenuItem value="10000" sx={{ fontSize: '0.82rem' }}>Every 10 seconds</MenuItem>
+              <MenuItem value="manual" sx={{ fontSize: '0.82rem' }}>Manual only</MenuItem>
             </Select>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* 2. Notifications & Alerts */}
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 3,
-          mb: 2.5,
-          borderRadius: '10px',
-          backgroundColor: surface,
-          borderColor: border,
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5 }}>
-          <NotificationsOutlinedIcon sx={{ color: accent, fontSize: 20 }} />
-          <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.92rem' }}>
-              Editor Notifications
-            </Typography>
-            <Typography variant="caption" sx={{ color: textMuted }}>
-              Push status notifications to the IDE status bar
-            </Typography>
-          </Box>
-        </Box>
-
-        <FormControlLabel
-          control={
-            <Switch
-              size="small"
-              checked={vscodeNotify}
-              onChange={(e) => setVscodeNotify(e.target.checked)}
-              sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': { color: accent },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: accent }
-              }}
-            />
-          }
-          label={
-            <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.84rem' }}>
-              Notify in VS Code, Cursor, and Windsurf status bar when drift is detected
-            </Typography>
           }
         />
       </Paper>
 
-      {/* Save Button */}
-      <Box sx={{ mb: 3 }}>
-        <Button
-          variant="contained"
-          size="small"
-          onClick={handleSave}
-          startIcon={<CheckIcon sx={{ fontSize: 16 }} />}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            borderRadius: '6px',
-            px: 2,
-            py: 0.6,
-            fontSize: '0.82rem'
-          }}
-        >
-          Save Preferences
-        </Button>
-      </Box>
-
-      <Divider sx={{ borderColor: border, mb: 3 }} />
-
-      {/* 3. Demo / Simulation Sandbox */}
+      {/* Notifications */}
       <Paper
         variant="outlined"
-        sx={{
-          p: 3,
-          borderRadius: '10px',
-          backgroundColor: surface,
-          borderColor: border,
-        }}
+        sx={{ p: 3, mb: 3, borderRadius: '8px', backgroundColor: surface, borderColor: border }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1 }}>
-          <ScienceOutlinedIcon sx={{ color: textMuted, fontSize: 20 }} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.5 }}>
+          <NotificationsOutlinedIcon sx={{ color: accent, fontSize: 20 }} />
           <Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.92rem' }}>
-              Simulation Sandbox
+              Notifications
             </Typography>
             <Typography variant="caption" sx={{ color: textMuted }}>
-              Inject sample capability drift on local manifests for verification testing
+              Control how ToolGuard alerts you about drift events
             </Typography>
           </Box>
         </Box>
 
-        <Typography variant="body2" sx={{ color: textMuted, mb: 2, fontSize: '0.82rem' }}>
-          Simulates an unauthorized capability expansion (e.g. network egress or admin flag) on <code>npm:dev</code>.
-        </Typography>
-
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={loadJudgeDemo}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.82rem',
-              borderRadius: '6px',
-              borderColor: border,
-              color: textMuted,
-              px: 1.75,
-              py: 0.5,
-              '&:hover': { borderColor: 'text.primary', color: 'text.primary' }
-            }}
-          >
-            {isJudgeDemoActive ? 'Reset Simulation' : 'Launch Simulation'}
-          </Button>
-
-          {isJudgeDemoActive && (
-            <Button
-              variant="text"
-              size="small"
-              onClick={exitJudgeDemo}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 500,
-                fontSize: '0.82rem',
-                color: textMuted,
-                '&:hover': { color: 'text.primary' }
-              }}
-            >
-              Exit Simulation
-            </Button>
-          )}
-
-          <Button
-            variant="text"
-            size="small"
-            onClick={resetToBaseline}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 500,
-              fontSize: '0.82rem',
-              color: textMuted,
-              '&:hover': { color: 'text.primary' }
-            }}
-          >
-            Reset Baseline State
-          </Button>
-        </Box>
+        <SettingRow
+          label="IDE status bar alerts"
+          description="Show real-time drift alerts in the VS Code, Cursor, and Windsurf status bar."
+          control={
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={vscodeNotify}
+                  onChange={(e) => setVscodeNotify(e.target.checked)}
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': { color: accent },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: accent },
+                  }}
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ color: textMuted, fontSize: '0.82rem', ml: 0.5 }}>
+                  {vscodeNotify ? 'On' : 'Off'}
+                </Typography>
+              }
+              sx={{ mr: 0 }}
+            />
+          }
+        />
       </Paper>
+
+      {/* Save */}
+      <Button
+        variant="contained"
+        fullWidth
+        onClick={handleSave}
+        startIcon={<CheckCircleOutlineIcon sx={{ fontSize: 17 }} />}
+        sx={{
+          textTransform: 'none',
+          fontWeight: 700,
+          fontSize: '0.88rem',
+          borderRadius: '8px',
+          py: 1.1,
+          backgroundColor: accent,
+          color: isDark ? '#121212' : '#FFFFFF',
+          boxShadow: 'none',
+          '&:hover': { backgroundColor: isDark ? '#2A9B62' : '#059669', boxShadow: 'none' },
+        }}
+      >
+        Save Preferences
+      </Button>
     </Box>
   );
 };

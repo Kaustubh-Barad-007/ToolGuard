@@ -1,65 +1,99 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Paper,
-  Grid,
   Button,
   IconButton,
   Tooltip,
   Alert,
   TextField,
-  Tabs,
-  Tab,
-  Divider,
+  Chip,
   useTheme,
-  CircularProgress
+  CircularProgress,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DownloadIcon from '@mui/icons-material/Download';
 import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
-import TerminalOutlinedIcon from '@mui/icons-material/TerminalOutlined';
-import CodeIcon from '@mui/icons-material/Code';
-import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
+import WindowIcon from '@mui/icons-material/Window';
+import AppleIcon from '@mui/icons-material/Apple';
+import TerminalIcon from '@mui/icons-material/Terminal';
 import { useNavigate } from 'react-router-dom';
 import { useDemoData } from '../context/DemoDataContext';
 
-const VSIX_URL  = 'https://toolguard-app.vercel.app/toolguard-vscode-1.0.0.vsix';
-const TGZ_URL   = 'https://toolguard-app.vercel.app/toolguard.tgz';
+const VSIX_URL = 'https://toolguard-app.vercel.app/toolguard-vscode-1.0.0.vsix';
+const TGZ_URL  = 'https://toolguard-app.vercel.app/toolguard.tgz';
 
-const CLI_STEPS = [
-  { label: '1. Global Installation', cmd: `npm install -g ${TGZ_URL}`, note: 'Node.js 18+ · Windows, macOS, and Linux' },
-  { label: '2. Baseline Initialization', cmd: 'toolguard init -y', note: 'Discovers package.json and MCP manifests into baseline.json' },
-  { label: '3. Verification Scan', cmd: 'toolguard scan', note: 'Verifies active capabilities against your local baseline' },
-  { label: '4. Disconnect Project', cmd: 'toolguard disconnect', note: 'Unlinks local monitoring and removes baseline state' },
-];
+type OsType = 'windows' | 'mac' | 'linux';
 
-const IDE_TABS = [
-  { label: 'VS Code', cmd: `curl.exe -LO ${VSIX_URL}; code --install-extension toolguard-vscode-1.0.0.vsix`, note: 'PowerShell / CMD' },
-  { label: 'Cursor AI', cmd: `curl.exe -LO ${VSIX_URL}; cursor --install-extension toolguard-vscode-1.0.0.vsix`, note: 'PowerShell / CMD' },
-  { label: 'Windsurf', cmd: `curl.exe -LO ${VSIX_URL}; windsurf --install-extension toolguard-vscode-1.0.0.vsix`, note: 'PowerShell / CMD' },
-  { label: 'macOS / Linux', cmd: `curl -LO ${VSIX_URL} && code --install-extension toolguard-vscode-1.0.0.vsix`, note: 'Bash / Zsh' },
-];
+function detectOs(): OsType {
+  const ua = (navigator.userAgent || '').toLowerCase();
+  if (ua.includes('win')) return 'windows';
+  if (ua.includes('mac') || ua.includes('darwin')) return 'mac';
+  return 'linux';
+}
+
+const OS_CONFIG: Record<OsType, {
+  label: string;
+  icon: React.ReactNode;
+  installCmd: string;
+  ideCmd: string;
+  shell: string;
+}> = {
+  windows: {
+    label: 'Windows',
+    icon: <WindowIcon sx={{ fontSize: 16 }} />,
+    installCmd: `irm ${TGZ_URL.replace('toolguard.tgz','install.ps1').replace('https://toolguard-app.vercel.app', 'https://toolguard-app.vercel.app')} | iex`,
+    ideCmd: `curl.exe -LO ${VSIX_URL} && code --install-extension toolguard-vscode-1.0.0.vsix`,
+    shell: 'PowerShell',
+  },
+  mac: {
+    label: 'macOS',
+    icon: <AppleIcon sx={{ fontSize: 16 }} />,
+    installCmd: `curl -fsSL https://toolguard-app.vercel.app/install.sh | bash`,
+    ideCmd: `curl -LO ${VSIX_URL} && code --install-extension toolguard-vscode-1.0.0.vsix`,
+    shell: 'Terminal',
+  },
+  linux: {
+    label: 'Linux',
+    icon: <TerminalIcon sx={{ fontSize: 16 }} />,
+    installCmd: `curl -fsSL https://toolguard-app.vercel.app/install.sh | bash`,
+    ideCmd: `curl -LO ${VSIX_URL} && code --install-extension toolguard-vscode-1.0.0.vsix`,
+    shell: 'Terminal',
+  },
+};
 
 export const IdeConnectPage: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const navigate = useNavigate();
-  const { importWorkspaceBaseline, loadJudgeDemo, loadIdeWorkspace, isVerifying } = useDemoData();
+  const { importWorkspaceBaseline, isVerifying } = useDemoData();
 
+  const [os, setOs] = useState<OsType>(detectOs());
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [activeIdeTab, setActiveIdeTab] = useState(0);
+  const [activeStep, setActiveStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+
+  // Manual baseline import state
   const [jsonText, setJsonText] = useState('');
   const [projectName, setProjectName] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
 
-  const border       = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
-  const surface      = isDark ? '#0d1117' : '#ffffff';
-  const surfaceMuted = isDark ? '#080c10' : '#f6f8fa';
-  const accent       = isDark ? '#00d4aa' : '#008b72';
-  const textMuted    = isDark ? '#8b949e' : '#57606a';
+  // Theme tokens
+  const border    = isDark ? '#2E2E2E' : '#E5E7EB';
+  const surface   = isDark ? '#1C1C1C' : '#FFFFFF';
+  const accent    = isDark ? '#3ECF8E' : '#00C475';
+  const textMuted = isDark ? '#9E9E9E' : '#6B7280';
+  const bg        = isDark ? '#171717' : '#F9FAFB';
+
+  const osConf = OS_CONFIG[os];
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -67,20 +101,28 @@ export const IdeConnectPage: React.FC = () => {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const markDone = (step: number) => {
+    setCompletedSteps(prev => new Set(prev).add(step));
+    setActiveStep(step + 1);
+  };
+
   const CopyBtn = ({ text, id }: { text: string; id: string }) => (
-    <Tooltip title={copiedKey === id ? 'Copied' : 'Copy'}>
+    <Tooltip title={copiedKey === id ? 'Copied!' : 'Copy command'}>
       <IconButton
         size="small"
         onClick={() => copy(text, id)}
         sx={{
           ml: 1,
+          flexShrink: 0,
           color: copiedKey === id ? accent : textMuted,
-          p: 0.5,
-          borderRadius: '4px',
-          '&:hover': { color: 'text.primary' }
+          p: 0.6,
+          borderRadius: '6px',
+          '&:hover': { color: 'text.primary', backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }
         }}
       >
-        {copiedKey === id ? <CheckIcon sx={{ fontSize: 15, color: accent }} /> : <ContentCopyIcon sx={{ fontSize: 15 }} />}
+        {copiedKey === id
+          ? <CheckIcon sx={{ fontSize: 15, color: accent }} />
+          : <ContentCopyIcon sx={{ fontSize: 15 }} />}
       </IconButton>
     </Tooltip>
   );
@@ -89,19 +131,78 @@ export const IdeConnectPage: React.FC = () => {
     <Box sx={{
       display: 'flex',
       alignItems: 'center',
-      backgroundColor: surfaceMuted,
+      backgroundColor: isDark ? '#0D0D0D' : '#F4F4F5',
       border: `1px solid ${border}`,
       borderRadius: '8px',
-      px: 1.5,
-      py: 1,
-      fontFamily: '"JetBrains Mono", monospace',
-      fontSize: '0.8rem',
-      color: isDark ? '#e6edf3' : '#24292f'
+      px: 2,
+      py: 1.25,
+      mt: 1.5,
+      gap: 1,
     }}>
-      <code style={{ flex: 1, wordBreak: 'break-all', fontFamily: 'inherit' }}>{text}</code>
+      <code style={{
+        flex: 1,
+        wordBreak: 'break-all',
+        fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+        fontSize: '0.84rem',
+        color: isDark ? '#A8E6CF' : '#065F46',
+        lineHeight: 1.6,
+      }}>
+        {text}
+      </code>
       <CopyBtn text={text} id={id} />
     </Box>
   );
+
+  const StepDoneBadge = ({ step }: { step: number }) =>
+    completedSteps.has(step) ? (
+      <CheckCircleIcon sx={{ fontSize: 16, color: accent, ml: 0.5 }} />
+    ) : null;
+
+  // Steps config
+  const steps = [
+    {
+      label: 'Install ToolGuard CLI',
+      desc: `Paste this single command in your ${osConf.shell} — it installs everything automatically.`,
+      cmd: osConf.installCmd,
+      cmdId: `install-${os}`,
+      note: `Requires Node.js 18+. If you don't have it, download from nodejs.org first.`,
+      actionLabel: 'I ran this command ✓',
+    },
+    {
+      label: 'Protect your project',
+      desc: 'Open your project folder in terminal, then run these two commands:',
+      multiCmd: [
+        { label: 'Go to your project', cmd: 'cd /path/to/your-project', id: 'cd-step' },
+        { label: 'Initialize ToolGuard', cmd: 'toolguard init -y', id: 'init-step' },
+      ],
+      note: 'This scans your project and creates a cryptographic baseline — like a fingerprint of your tools.',
+      actionLabel: 'Baseline created ✓',
+    },
+    {
+      label: 'Install the IDE Extension (VS Code / Cursor)',
+      desc: 'Get real-time drift alerts right inside your editor:',
+      optionA: {
+        label: 'Run in terminal:',
+        cmd: osConf.ideCmd,
+        id: `ide-${os}`,
+      },
+      optionB: {
+        label: 'Or download manually:',
+        href: VSIX_URL,
+        fileName: 'toolguard-vscode-1.0.0.vsix',
+      },
+      note: 'Works with VS Code, Cursor AI, and Windsurf. After installing, the ToolGuard shield icon appears in your status bar.',
+      actionLabel: 'Extension installed ✓',
+    },
+    {
+      label: 'Run your first scan',
+      desc: 'Verify all your tools still match the trusted baseline:',
+      cmd: 'toolguard scan',
+      cmdId: 'scan-step',
+      note: 'If everything matches, you\'ll see ✓ for each tool. You\'re now protected!',
+      actionLabel: 'Scan done ✓',
+    },
+  ];
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -139,328 +240,377 @@ export const IdeConnectPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
+    <Box sx={{ maxWidth: 760, mx: 'auto' }}>
+
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3.5, flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box
+          component="img"
+          src="/logo.png"
+          alt="ToolGuard"
+          sx={{ width: 52, height: 52, borderRadius: '12px', objectFit: 'cover', border: `1px solid ${border}`, flexShrink: 0 }}
+        />
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', letterSpacing: '-0.02em' }}>
-            Integrations &amp; Setup
+          <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', letterSpacing: '-0.02em', mb: 0.5 }}>
+            IDE &amp; CLI
           </Typography>
-          <Typography variant="body2" sx={{ color: textMuted, mt: 0.25 }}>
-            Connect ToolGuard through the CLI, IDE extensions, or manual baseline synchronization.
+          <Typography variant="body2" sx={{ color: textMuted }}>
+            Connect your workspace, install the ToolGuard CLI, and enable real-time IDE extensions.
           </Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center', flexWrap: 'wrap' }}>
-          <Button
-            variant="contained"
-            size="small"
-            disabled={isVerifying}
-            startIcon={isVerifying ? <CircularProgress size={13} color="inherit" /> : <CodeIcon sx={{ fontSize: 16 }} />}
-            onClick={() => loadIdeWorkspace()}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 650,
-              fontSize: '0.82rem',
-              borderRadius: '6px',
-              backgroundColor: isDark ? '#10b981' : '#059669',
-              color: '#ffffff',
-              px: 1.75,
-              py: 0.6,
-              '&:hover': { backgroundColor: isDark ? '#059669' : '#047857' }
-            }}
-          >
-            {isVerifying ? 'Connecting IDE Suite…' : '⚡ 1-Click Connect IDE Suite'}
-          </Button>
-
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => { loadJudgeDemo(); navigate('/drift'); }}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.82rem',
-              borderRadius: '6px',
-              borderColor: border,
-              color: textMuted,
-              px: 1.75,
-              py: 0.6,
-              '&:hover': { borderColor: 'text.primary', color: 'text.primary' }
-            }}
-          >
-            Load Demo Workspace
-          </Button>
         </Box>
       </Box>
 
-      <Grid container spacing={2.5}>
-        {/* Automated 1-Liner Quick Installation */}
-        <Grid item xs={12}>
-          <Paper
-            variant="outlined"
+      {/* OS Selector */}
+      <Box sx={{ mb: 3.5, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+        <Typography variant="body2" sx={{ color: textMuted, fontWeight: 500, fontSize: '0.84rem' }}>
+          Your OS:
+        </Typography>
+        {(['windows', 'mac', 'linux'] as OsType[]).map((o) => (
+          <Chip
+            key={o}
+            icon={OS_CONFIG[o].icon as any}
+            label={OS_CONFIG[o].label}
+            size="small"
+            onClick={() => { setOs(o); setCompletedSteps(new Set()); setActiveStep(0); }}
             sx={{
-              p: 3,
-              borderRadius: '10px',
-              backgroundColor: isDark ? 'rgba(0, 212, 170, 0.04)' : 'rgba(0, 139, 114, 0.03)',
-              border: `1px solid ${isDark ? 'rgba(0, 212, 170, 0.25)' : 'rgba(0, 139, 114, 0.2)'}`,
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.8rem',
+              px: 0.5,
+              borderRadius: '20px',
+              backgroundColor: os === o
+                ? (isDark ? 'rgba(62, 207, 142, 0.15)' : 'rgba(0, 196, 117, 0.12)')
+                : 'transparent',
+              color: os === o ? accent : textMuted,
+              border: `1px solid ${os === o ? accent : border}`,
+              '& .MuiChip-icon': { color: 'inherit' },
+              '&:hover': { borderColor: accent, color: accent },
             }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.94rem' }}>
-                  ⚡ Instant 1-Line Installer (Recommended)
-                </Typography>
-                <Typography variant="caption" sx={{ color: textMuted }}>
-                  Installs ToolGuard CLI and auto-configures VS Code, Cursor AI, &amp; Windsurf extensions with zero setup
-                </Typography>
-              </Box>
-            </Box>
+          />
+        ))}
+        <Chip
+          label="Detected automatically"
+          size="small"
+          sx={{
+            fontSize: '0.72rem',
+            color: textMuted,
+            backgroundColor: 'transparent',
+            border: `1px dashed ${border}`,
+            ml: 0.5,
+          }}
+        />
+      </Box>
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, display: 'block', mb: 0.5, fontSize: '0.74rem' }}>
-                  Windows (PowerShell)
+      {/* Step-by-Step Stepper */}
+      <Paper
+        variant="outlined"
+        sx={{ borderRadius: '10px', backgroundColor: surface, borderColor: border, mb: 3, overflow: 'hidden' }}
+      >
+        <Stepper
+          activeStep={activeStep}
+          orientation="vertical"
+          sx={{
+            p: 0,
+            '& .MuiStepLabel-root': { py: 2, px: 3 },
+            '& .MuiStepContent-root': { px: 3, pb: 3, ml: '36px', borderLeft: `1px solid ${border}` },
+            '& .MuiStepConnector-line': { borderColor: border },
+            '& .MuiStepIcon-root': {
+              color: isDark ? '#333' : '#E5E7EB',
+              '&.Mui-active': { color: accent },
+              '&.Mui-completed': { color: accent },
+            },
+            '& .MuiStepLabel-label': {
+              fontWeight: 600,
+              fontSize: '0.92rem',
+              color: 'text.primary',
+              '&.Mui-active': { color: 'text.primary' },
+              '&.Mui-completed': { color: textMuted },
+            },
+          }}
+        >
+          {steps.map((step, index) => (
+            <Step key={index} completed={completedSteps.has(index)}>
+              <StepLabel
+                onClick={() => setActiveStep(index)}
+                sx={{ cursor: 'pointer' }}
+                optional={
+                  completedSteps.has(index) && (
+                    <Typography variant="caption" sx={{ color: accent, fontWeight: 600, fontSize: '0.72rem' }}>
+                      Done
+                    </Typography>
+                  )
+                }
+              >
+                {step.label}
+              </StepLabel>
+              <StepContent>
+                <Typography variant="body2" sx={{ color: 'text.primary', mb: 1.5, fontSize: '0.88rem', lineHeight: 1.65 }}>
+                  {step.desc}
                 </Typography>
-                <CodeBlock text="irm https://toolguard-app.vercel.app/install.ps1 | iex" id="inst-ps1" />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, display: 'block', mb: 0.5, fontSize: '0.74rem' }}>
-                  macOS / Linux (Terminal)
-                </Typography>
-                <CodeBlock text="curl -fsSL https://toolguard-app.vercel.app/install.sh | bash" id="inst-sh" />
-              </Grid>
-            </Grid>
-          </Paper>
-        </Grid>
 
-        {/* CLI Section */}
-        <Grid item xs={12}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 3,
-              borderRadius: '10px',
-              backgroundColor: surface,
-              borderColor: border,
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2.5 }}>
-              <TerminalOutlinedIcon sx={{ fontSize: 20, color: accent }} />
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.94rem' }}>
-                  CLI Installation
-                </Typography>
-                <Typography variant="caption" sx={{ color: textMuted }}>
-                  Standalone executable for terminal workflows, pre-commit hooks, and CI/CD pipelines
-                </Typography>
-              </Box>
-            </Box>
+                {/* Single command step */}
+                {'cmd' in step && step.cmd && (
+                  <CodeBlock text={step.cmd} id={step.cmdId!} />
+                )}
 
-            <Grid container spacing={2}>
-              {CLI_STEPS.map((step, i) => (
-                <Grid item xs={12} sm={6} key={i}>
-                  <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, display: 'block', mb: 0.5, fontSize: '0.74rem' }}>
-                    {step.label}
+                {/* Multi-command step */}
+                {'multiCmd' in step && step.multiCmd && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {step.multiCmd.map((mc) => (
+                      <Box key={mc.id}>
+                        <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, fontSize: '0.73rem', display: 'block', mb: 0.25 }}>
+                          {mc.label}
+                        </Typography>
+                        <CodeBlock text={mc.cmd} id={mc.id} />
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+
+                {/* IDE Extension step: dual option */}
+                {'optionA' in step && step.optionA && (
+                  <Box>
+                    <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, fontSize: '0.73rem', display: 'block', mb: 0.25 }}>
+                      {step.optionA.label}
+                    </Typography>
+                    <CodeBlock text={step.optionA.cmd} id={step.optionA.id} />
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 2, mb: 0.5 }}>
+                      <Box sx={{ flex: 1, height: '1px', backgroundColor: border }} />
+                      <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, fontSize: '0.72rem' }}>OR</Typography>
+                      <Box sx={{ flex: 1, height: '1px', backgroundColor: border }} />
+                    </Box>
+
+                    <Typography variant="caption" sx={{ color: textMuted, fontWeight: 600, fontSize: '0.73rem', display: 'block', mb: 0.75, mt: 0.75 }}>
+                      {step.optionB?.label}
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<DownloadIcon sx={{ fontSize: 15 }} />}
+                      href={step.optionB?.href}
+                      download
+                      sx={{
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.82rem',
+                        borderRadius: '7px',
+                        borderColor: border,
+                        color: textMuted,
+                        px: 2,
+                        py: 0.7,
+                        '&:hover': { borderColor: accent, color: accent }
+                      }}
+                    >
+                      Download {step.optionB?.fileName}
+                    </Button>
+                  </Box>
+                )}
+
+                {/* Note */}
+                {'note' in step && step.note && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                      mt: 1.75,
+                      color: textMuted,
+                      fontSize: '0.78rem',
+                      lineHeight: 1.6,
+                      px: 1.5,
+                      py: 1,
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)',
+                      borderRadius: '6px',
+                      border: `1px solid ${border}`,
+                    }}
+                  >
+                    💡 {step.note}
                   </Typography>
-                  <CodeBlock text={step.cmd} id={`cli-${i}`} />
-                  <Typography variant="caption" sx={{ color: textMuted, display: 'block', mt: 0.5, fontSize: '0.72rem' }}>
-                    {step.note}
-                  </Typography>
-                </Grid>
-              ))}
-            </Grid>
-          </Paper>
-        </Grid>
+                )}
 
-        {/* IDE Extensions */}
-        <Grid item xs={12}>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 3,
-              borderRadius: '10px',
-              backgroundColor: surface,
-              borderColor: border,
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2 }}>
-              <CodeIcon sx={{ fontSize: 20, color: accent }} />
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.94rem' }}>
-                  Editor Extensions (VS Code, Cursor, Windsurf)
-                </Typography>
-                <Typography variant="caption" sx={{ color: textMuted }}>
-                  Installs background file-watcher with real-time status bar indicators
-                </Typography>
-              </Box>
-            </Box>
+                {/* Action button */}
+                <Box sx={{ mt: 2.5, display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => markDone(index)}
+                    disabled={completedSteps.has(index)}
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      borderRadius: '7px',
+                      backgroundColor: completedSteps.has(index) ? (isDark ? '#1A3D2E' : '#D1FAE5') : accent,
+                      color: completedSteps.has(index) ? accent : (isDark ? '#121212' : '#FFFFFF'),
+                      px: 2.25,
+                      py: 0.7,
+                      boxShadow: 'none',
+                      '&:hover': { backgroundColor: isDark ? '#2A9B62' : '#059669', boxShadow: 'none' },
+                      '&.Mui-disabled': {
+                        backgroundColor: isDark ? '#1A3D2E' : '#D1FAE5',
+                        color: accent,
+                      }
+                    }}
+                  >
+                    {completedSteps.has(index)
+                      ? `✓ ${step.actionLabel}`
+                      : step.actionLabel}
+                  </Button>
+                  {index > 0 && (
+                    <Button
+                      size="small"
+                      onClick={() => setActiveStep(index - 1)}
+                      sx={{ textTransform: 'none', color: textMuted, fontSize: '0.78rem', '&:hover': { color: 'text.primary' } }}
+                    >
+                      ← Back
+                    </Button>
+                  )}
+                </Box>
+              </StepContent>
+            </Step>
+          ))}
+        </Stepper>
+      </Paper>
 
-            <Tabs
-              value={activeIdeTab}
-              onChange={(_, v) => setActiveIdeTab(v)}
+      {/* All done! Banner */}
+      {completedSteps.size === steps.length && (
+        <Alert
+          severity="success"
+          icon={<CheckCircleIcon sx={{ fontSize: 20 }} />}
+          sx={{
+            mb: 3,
+            borderRadius: '8px',
+            border: `1px solid ${isDark ? 'rgba(62,207,142,0.35)' : '#A7F3D0'}`,
+            backgroundColor: isDark ? 'rgba(62,207,142,0.08)' : '#ECFDF5',
+            fontSize: '0.86rem',
+            fontWeight: 500,
+          }}
+        >
+          <strong>You're fully protected!</strong> ToolGuard is now actively monitoring your project for capability drift. Head to the Dashboard to see your security status.
+          <Box sx={{ mt: 1.5 }}>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => navigate('/dashboard')}
               sx={{
-                borderBottom: `1px solid ${border}`,
-                mb: 2,
-                minHeight: 36,
-                '& .MuiTab-root': {
-                  minHeight: 36,
-                  fontSize: '0.8rem',
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  py: 0.5,
-                  px: 1.75,
-                  color: textMuted,
-                  '&.Mui-selected': { color: 'text.primary', fontWeight: 600 }
-                },
-                '& .MuiTabs-indicator': { backgroundColor: accent, height: 2 }
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                borderRadius: '7px',
+                backgroundColor: accent,
+                color: isDark ? '#121212' : '#FFFFFF',
+                px: 2.5,
+                boxShadow: 'none',
+                '&:hover': { backgroundColor: isDark ? '#2A9B62' : '#059669', boxShadow: 'none' },
               }}
             >
-              {IDE_TABS.map((t, i) => <Tab key={i} label={t.label} />)}
-            </Tabs>
+              Go to Dashboard →
+            </Button>
+          </Box>
+        </Alert>
+      )}
 
-            <CodeBlock text={IDE_TABS[activeIdeTab].cmd} id={`ide-${activeIdeTab}`} />
+      {/* Advanced: Manual Baseline Sync */}
+      <Paper
+        variant="outlined"
+        sx={{ borderRadius: '10px', backgroundColor: surface, borderColor: border, p: 3 }}
+      >
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: textMuted, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', mb: 0.5 }}>
+          Advanced
+        </Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.92rem', mb: 0.5 }}>
+          Import Existing Baseline
+        </Typography>
+        <Typography variant="body2" sx={{ color: textMuted, fontSize: '0.84rem', mb: 2 }}>
+          Already have a <code style={{ fontFamily: 'monospace', fontSize: '0.8em' }}>.toolguard/baseline.json</code> file? Upload it here to sync your workspace with this dashboard.
+        </Typography>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, flexWrap: 'wrap', gap: 1 }}>
-              <Typography variant="caption" sx={{ color: textMuted, fontSize: '0.76rem' }}>
-                Target shell: <strong>{IDE_TABS[activeIdeTab].note}</strong>
-              </Typography>
-              <Button
-                variant="text"
-                size="small"
-                startIcon={<DownloadIcon sx={{ fontSize: 15 }} />}
-                href={VSIX_URL}
-                download
-                sx={{
-                  textTransform: 'none',
-                  fontSize: '0.8rem',
-                  color: textMuted,
-                  fontWeight: 500,
-                  '&:hover': { color: 'text.primary' }
-                }}
-              >
-                Download .vsix directly
-              </Button>
-            </Box>
-          </Paper>
-        </Grid>
+        {importError && (
+          <Alert severity="error" sx={{ mb: 2, borderRadius: '7px', fontSize: '0.82rem' }}>{importError}</Alert>
+        )}
+        {importSuccess && (
+          <Alert severity="success" sx={{ mb: 2, borderRadius: '7px', fontSize: '0.82rem' }}>
+            ✓ Baseline imported — redirecting to dashboard…
+          </Alert>
+        )}
 
-        {/* Manual Baseline Sync */}
-        <Grid item xs={12}>
-          <Paper
-            variant="outlined"
+        <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5, flexWrap: 'wrap' }}>
+          <TextField
+            size="small"
+            label="Project name (optional)"
+            placeholder="e.g. my-app"
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
             sx={{
-              p: 3,
-              borderRadius: '10px',
-              backgroundColor: surface,
+              flex: '1 1 180px',
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '7px', fontSize: '0.82rem',
+                '& fieldset': { borderColor: border }
+              }
+            }}
+          />
+          <Button
+            variant="outlined"
+            component="label"
+            startIcon={<FileUploadOutlinedIcon sx={{ fontSize: 16 }} />}
+            size="small"
+            sx={{
+              textTransform: 'none',
+              borderRadius: '7px',
               borderColor: border,
+              color: textMuted,
+              fontWeight: 600,
+              fontSize: '0.82rem',
+              px: 2,
+              py: 0.8,
+              '&:hover': { borderColor: accent, color: accent }
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2 }}>
-              <UploadFileOutlinedIcon sx={{ fontSize: 20, color: accent }} />
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.94rem' }}>
-                  Manual Baseline Sync
-                </Typography>
-                <Typography variant="caption" sx={{ color: textMuted }}>
-                  Import an existing <code>.toolguard/baseline.json</code> directly into this browser console
-                </Typography>
-              </Box>
-            </Box>
+            Upload baseline.json
+            <input type="file" accept=".json" hidden onChange={handleFileUpload} />
+          </Button>
+        </Box>
 
-            {importError && (
-              <Alert severity="error" sx={{ mb: 2, borderRadius: '6px', fontSize: '0.82rem' }}>
-                {importError}
-              </Alert>
-            )}
-            {importSuccess && (
-              <Alert severity="success" sx={{ mb: 2, borderRadius: '6px', fontSize: '0.82rem' }}>
-                Baseline loaded. Redirecting to console…
-              </Alert>
-            )}
+        <TextField
+          multiline
+          rows={3}
+          fullWidth
+          size="small"
+          placeholder='Or paste your baseline JSON here: { "baselineId": "...", "tools": { ... } }'
+          value={jsonText}
+          onChange={(e) => setJsonText(e.target.value)}
+          sx={{
+            mb: 1.5,
+            '& .MuiInputBase-root': {
+              fontFamily: '"JetBrains Mono", monospace',
+              borderRadius: '7px',
+              fontSize: '0.78rem',
+              '& fieldset': { borderColor: border }
+            }
+          }}
+        />
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Project Identifier (optional)"
-                  placeholder="e.g. core-api"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  sx={{
-                    mb: 1.5,
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '6px',
-                      fontSize: '0.82rem',
-                      backgroundColor: surfaceMuted,
-                      '& fieldset': { borderColor: border }
-                    }
-                  }}
-                />
-                <Button
-                  variant="outlined"
-                  component="label"
-                  startIcon={<FileUploadOutlinedIcon sx={{ fontSize: 16 }} />}
-                  fullWidth
-                  size="small"
-                  sx={{
-                    textTransform: 'none',
-                    borderRadius: '6px',
-                    borderColor: border,
-                    color: textMuted,
-                    fontWeight: 500,
-                    fontSize: '0.8rem',
-                    py: 0.8,
-                    '&:hover': { borderColor: 'text.primary', color: 'text.primary' }
-                  }}
-                >
-                  Upload baseline.json
-                  <input type="file" accept=".json" hidden onChange={handleFileUpload} />
-                </Button>
-              </Grid>
-
-              <Grid item xs={12} sm={8}>
-                <TextField
-                  multiline
-                  rows={3}
-                  fullWidth
-                  size="small"
-                  placeholder='Paste baseline JSON: { "baselineId": "...", "tools": { ... } }'
-                  value={jsonText}
-                  onChange={(e) => setJsonText(e.target.value)}
-                  sx={{
-                    mb: 1.5,
-                    '& .MuiInputBase-root': {
-                      fontFamily: '"JetBrains Mono", monospace',
-                      borderRadius: '6px',
-                      fontSize: '0.78rem',
-                      backgroundColor: surfaceMuted,
-                      '& fieldset': { borderColor: border }
-                    }
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleImport}
-                  disabled={importSuccess || !jsonText.trim()}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.82rem',
-                    borderRadius: '6px',
-                    px: 2,
-                    py: 0.6
-                  }}
-                >
-                  Import Baseline
-                </Button>
-              </Grid>
-            </Grid>
-          </Paper>
-        </Grid>
-      </Grid>
+        <Button
+          variant="contained"
+          size="small"
+          onClick={handleImport}
+          disabled={importSuccess || !jsonText.trim()}
+          sx={{
+            textTransform: 'none',
+            fontWeight: 700,
+            fontSize: '0.82rem',
+            borderRadius: '7px',
+            px: 2.5,
+            py: 0.7,
+            backgroundColor: accent,
+            color: isDark ? '#121212' : '#FFFFFF',
+            boxShadow: 'none',
+            '&:hover': { backgroundColor: isDark ? '#2A9B62' : '#059669', boxShadow: 'none' },
+          }}
+        >
+          Import Baseline →
+        </Button>
+      </Paper>
     </Box>
   );
 };

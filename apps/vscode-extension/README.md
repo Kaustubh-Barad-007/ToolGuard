@@ -1,5 +1,9 @@
 # ToolGuard for VS Code
 
+<p align="center">
+  <img src="media/logo.png" alt="ToolGuard Logo" width="128" />
+</p>
+
 **"You trusted the tool. Did the tool stay the same?"**
 
 ToolGuard detects **trust drift** in developer and AI tool definitions, configurations, and MCP server setups.

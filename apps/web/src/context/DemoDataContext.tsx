@@ -1,22 +1,79 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Baseline,
   DriftEvent,
   AuditEvent,
   ToolScanStatus,
   ToolDefinition,
-  ScanResult
+  ScanResult,
+  TrustStatus
 } from '@toolguard/shared';
-import { BaselineManager } from '@toolguard/core';
+import {
+  BaselineManager,
+  computeFingerprint,
+  normalizeToolDefinition,
+  redactSensitiveData
+} from '@toolguard/core';
+
+function sanitizeBaselineFingerprints(bl: Baseline): Baseline {
+  if (!bl || !bl.tools) return bl;
+  let modified = false;
+  const updatedTools: Record<string, any> = {};
+  for (const [toolId, entry] of Object.entries(bl.tools)) {
+    if (!entry.fingerprint || entry.fingerprint.startsWith('base-fp-') || entry.fingerprint.startsWith('safe-fp-') || entry.fingerprint.startsWith('drift-fp-') || !/^[a-f0-9]{64}$/i.test(entry.fingerprint)) {
+      modified = true;
+      const norm = entry.normalizedDefinition || normalizeToolDefinition(redactSensitiveData({
+        id: entry.toolId,
+        name: entry.name,
+        permissions: ['read'],
+        endpoint: 'local',
+        execution: { enabled: false }
+      }));
+      updatedTools[toolId] = {
+        ...entry,
+        normalizedDefinition: norm,
+        fingerprint: computeFingerprint(norm).hash
+      };
+    } else {
+      updatedTools[toolId] = entry;
+    }
+  }
+  return modified ? { ...bl, tools: updatedTools } : bl;
+}
+
+export interface VersionChangeItem {
+  toolName: string;
+  changeType: 'added' | 'removed' | 'modified';
+  summary: string;
+  path?: string;
+  before?: unknown;
+  after?: unknown;
+}
+
+export interface VersionHistoryEntry {
+  version: number;
+  versionTag: string;
+  timestamp: string;
+  actor: string;
+  action: 'INITIALIZED' | 'ACCEPTED_DRIFT' | 'BASELINE_CREATED' | 'IMPORTED';
+  title: string;
+  toolCount: number;
+  toolsAffected: string[];
+  changes?: VersionChangeItem[];
+  baselineHash?: string;
+}
 
 export interface WorkspaceProfile {
   id: string;
   name: string;
+  path?: string;
   description: string;
   stack: 'Node / Web' | 'Python / Agent' | 'Monorepo' | 'Custom';
   tools: ToolDefinition[];
   baseline: Baseline;
   createdAt?: string;
+  versionHistory?: VersionHistoryEntry[];
 }
 
 interface DemoContextType {
@@ -29,7 +86,11 @@ interface DemoContextType {
   workspaces: WorkspaceProfile[];
   activeWorkspaceId: string | null;
   activeWorkspace: WorkspaceProfile | null;
+  versionHistory: VersionHistoryEntry[];
+  currentVersionTag: string;
   isJudgeDemoActive: boolean;
+  isLocalConnected: boolean;
+  localDaemonInfo: { workspaceName?: string; port?: number; lastHeartbeat?: number } | null;
   switchWorkspace: (workspaceId: string) => void;
   importWorkspaceBaseline: (baselineData: any, customName?: string, customTools?: ToolDefinition[]) => boolean;
   exportActiveBaseline: () => void;
@@ -175,13 +236,19 @@ const DEMO_BASELINE = BaselineManager.createBaseline(
 const DemoDataContext = createContext<DemoContextType | undefined>(undefined);
 
 export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
   // Start with clean user workspaces only (no old hardcoded projects)
   const [workspaces, setWorkspaces] = useState<WorkspaceProfile[]>(() => {
     try {
       const saved = localStorage.getItem('toolguard_workspaces');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.map((w: WorkspaceProfile) => ({
+            ...w,
+            baseline: sanitizeBaselineFingerprints(w.baseline)
+          }));
+        }
       }
     } catch {
       // Continue
@@ -190,13 +257,22 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(() => {
-    return localStorage.getItem('toolguard_active_workspace') || null;
+    const saved = localStorage.getItem('toolguard_active_workspace');
+    if (saved) return saved;
+    try {
+      const savedWorkspaces = localStorage.getItem('toolguard_workspaces');
+      if (savedWorkspaces) {
+        const parsed = JSON.parse(savedWorkspaces);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].id;
+      }
+    } catch {}
+    return null;
   });
 
   const [isJudgeDemoActive, setIsJudgeDemoActive] = useState<boolean>(false);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
 
-  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId) || null;
+  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId) || (workspaces.length > 0 ? workspaces[0] : null);
 
   const [tools, setTools] = useState<ToolDefinition[]>(activeWorkspace ? activeWorkspace.tools : []);
   const [baseline, setBaseline] = useState<Baseline>(activeWorkspace ? activeWorkspace.baseline : EMPTY_BASELINE);
@@ -234,21 +310,207 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
   const [auditLogs, setAuditLogs] = useState<AuditEvent[]>([]);
   const [lastScanTime, setLastScanTime] = useState<string>('Just now');
+  const [isLocalConnected, setIsLocalConnected] = useState<boolean>(false);
+  const [localDaemonInfo, setLocalDaemonInfo] = useState<{ workspaceName?: string; port?: number; lastHeartbeat?: number } | null>(null);
 
-  // Sync tools and baseline when active workspace changes
+  const [versionHistory, setVersionHistory] = useState<VersionHistoryEntry[]>(() => {
+    try {
+      const savedHist = localStorage.getItem('toolguard_version_history');
+      if (savedHist) {
+        const parsed = JSON.parse(savedHist);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    if (activeWorkspace?.versionHistory && activeWorkspace.versionHistory.length > 0) {
+      return activeWorkspace.versionHistory;
+    }
+    const currentBl = activeWorkspace ? activeWorkspace.baseline : EMPTY_BASELINE;
+    if (currentBl && currentBl.baselineId !== 'bl-empty') {
+      const toolNames = Object.keys(currentBl.tools || {});
+      return [{
+        version: currentBl.version || 1,
+        versionTag: `v1.0.${Math.max(0, (currentBl.version || 1) - 1)}`,
+        timestamp: currentBl.createdAt || new Date().toISOString(),
+        actor: currentBl.createdBy || 'developer@workspace.local',
+        action: 'INITIALIZED',
+        title: 'Initial Trusted Baseline Verified',
+        toolCount: toolNames.length || tools.length,
+        toolsAffected: toolNames.length > 0 ? toolNames : tools.map(t => t.name || t.id || ''),
+        changes: [
+          {
+            toolName: 'Project Manifest',
+            changeType: 'added',
+            summary: `Baseline initialized with ${toolNames.length || tools.length} trusted capabilities`
+          }
+        ],
+        baselineHash: currentBl.baselineId
+      }];
+    }
+    return [];
+  });
+
+  const currentVersionTag = `v1.0.${Math.max(0, (baseline?.version || 1) - 1)}`;
+
+  // Sync version history when active workspace changes
   useEffect(() => {
     if (activeWorkspace) {
-      setTools(activeWorkspace.tools);
-      setBaseline(activeWorkspace.baseline);
-      localStorage.setItem('toolguard_active_workspace', activeWorkspace.id);
-    } else if (!isJudgeDemoActive) {
-      setTools([]);
-      setBaseline(EMPTY_BASELINE);
-      setScanStatuses([]);
-      setDriftEvents([]);
-      localStorage.removeItem('toolguard_active_workspace');
+      if (activeWorkspace.versionHistory && activeWorkspace.versionHistory.length > 0) {
+        setVersionHistory(activeWorkspace.versionHistory);
+      } else if (activeWorkspace.baseline && activeWorkspace.baseline.baselineId !== 'bl-empty') {
+        const toolNames = Object.keys(activeWorkspace.baseline.tools || {});
+        setVersionHistory([{
+          version: activeWorkspace.baseline.version || 1,
+          versionTag: `v1.0.${Math.max(0, (activeWorkspace.baseline.version || 1) - 1)}`,
+          timestamp: activeWorkspace.baseline.createdAt || new Date().toISOString(),
+          actor: activeWorkspace.baseline.createdBy || 'developer@workspace.local',
+          action: 'INITIALIZED',
+          title: 'Initial Trusted Baseline Verified',
+          toolCount: toolNames.length || activeWorkspace.tools.length,
+          toolsAffected: toolNames.length > 0 ? toolNames : activeWorkspace.tools.map(t => t.name || t.id || ''),
+          changes: [
+            {
+              toolName: 'Project Manifest',
+              changeType: 'added',
+              summary: `Baseline initialized with ${toolNames.length || activeWorkspace.tools.length} trusted capabilities`
+            }
+          ],
+          baselineHash: activeWorkspace.baseline.baselineId
+        }]);
+      }
     }
-  }, [activeWorkspaceId, isJudgeDemoActive]);
+  }, [activeWorkspaceId]);
+
+  const activeWorkspaceRef = useRef(activeWorkspace);
+  activeWorkspaceRef.current = activeWorkspace;
+
+  const driftEventsRef = useRef(driftEvents);
+  driftEventsRef.current = driftEvents;
+
+  const isHashSyncActiveRef = useRef(false);
+  const lastProcessedHashRef = useRef<string>('');
+
+  // Background heartbeat polling to local IDE bridge (port 3154)
+  useEffect(() => {
+    let isCancelled = false;
+    let lastFingerprint = '';
+
+    const checkLocalBridge = async () => {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 1200);
+        const res = await fetch('http://127.0.0.1:3154/api/status', {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' }
+        });
+        clearTimeout(timer);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (!isCancelled && data.ok) {
+            setIsLocalConnected(true);
+            setLocalDaemonInfo({
+              workspaceName: data.workspace?.name || 'Local Workspace',
+              port: 3154,
+              lastHeartbeat: Date.now()
+            });
+
+            const currentActive = activeWorkspaceRef.current;
+            const currentDrifts = driftEventsRef.current;
+            const bridgeWsName = (data.workspace?.name || data.workspace?.id || '').toLowerCase();
+            const bridgeWsPath = (data.workspace?.path || data.cwd || '').toLowerCase();
+            const activeWsName = (currentActive?.name || currentActive?.id || '').toLowerCase();
+
+            const hasActiveHashSync = Boolean(
+              window.location.hash?.includes('sync=') ||
+              window.location.search?.includes('sync=') ||
+              isHashSyncActiveRef.current
+            );
+
+            // Workspace matches ONLY if:
+            // 1) Active workspace specifically matches the bridge response
+            // 2) OR there is NO active workspace loaded AND NO hash sync active
+            const workspaceMatches = currentActive && currentActive.id
+              ? (activeWsName === bridgeWsName || bridgeWsPath.includes(activeWsName) || activeWsName.includes(bridgeWsName))
+              : !hasActiveHashSync;
+
+            if (workspaceMatches) {
+              if (data.baseline && data.tools && Array.isArray(data.tools)) {
+                const currentFingerprint = `${data.baseline.baselineId}-${data.tools.length}-${data.tools.map((t: any) => `${t.id || t.name}:${t.permissions?.join(',')}:${t.execution?.command}`).join('|')}`;
+                if (currentFingerprint !== lastFingerprint) {
+                  lastFingerprint = currentFingerprint;
+                  importWorkspaceBaseline(data.baseline, data.workspace?.name || 'Local Workspace', data.tools);
+                }
+              }
+
+              if (data.scanResult && data.scanResult.tools) {
+                const detected = data.scanResult.tools.filter((t: any) => t.driftDetected);
+                if (detected.length > 0) {
+                  if (data.tools && Array.isArray(data.tools)) {
+                    setTools(data.tools);
+                  }
+                  if (data.baseline) {
+                    setBaseline(data.baseline);
+                  }
+                  setScanStatuses(data.scanResult.tools);
+                  setDriftEvents(detected.map((d: any) => ({
+                    eventId: `drift-${d.toolId}-${Date.now()}`,
+                    projectId: data.workspace?.id || 'local-workspace',
+                    toolId: d.toolId,
+                    toolName: d.name,
+                    baselineId: data.baseline?.baselineId || 'bl-local',
+                    scanId: `scan-${Date.now()}`,
+                    detectedAt: new Date().toISOString(),
+                    status: 'open',
+                    severity: d.status === 'HIGH RISK' ? 'high' : 'medium',
+                    changes: d.changes || []
+                  })));
+                } else {
+                  if (data.tools && Array.isArray(data.tools)) {
+                    setTools(data.tools);
+                  }
+                  if (data.baseline) {
+                    setBaseline(data.baseline);
+                  }
+                  setScanStatuses(data.scanResult.tools);
+                  setDriftEvents([]);
+                  driftEventsRef.current = [];
+                  isHashSyncActiveRef.current = false;
+                  try {
+                    if (window.history.replaceState) {
+                      window.history.replaceState(null, '', window.location.pathname);
+                    }
+                    window.location.hash = '';
+                  } catch {}
+                }
+              }
+            }
+            return;
+          }
+        }
+      } catch {
+        // Local bridge is offline — seamless fallback
+      }
+
+      if (!isCancelled) {
+        setIsLocalConnected(false);
+      }
+    };
+
+    checkLocalBridge();
+    const interval = setInterval(checkLocalBridge, 1000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Persist active workspace ID when changed
+  useEffect(() => {
+    if (activeWorkspaceId) {
+      localStorage.setItem('toolguard_active_workspace', activeWorkspaceId);
+    }
+  }, [activeWorkspaceId]);
 
   // Persist workspaces to localStorage
   useEffect(() => {
@@ -262,80 +524,290 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Security comparison whenever tools or baseline change
   useEffect(() => {
     if (tools.length > 0 && baseline && baseline.baselineId !== 'bl-empty') {
-      const res = BaselineManager.compare(tools, baseline);
-      setScanStatuses(res.tools);
+      try {
+        const res = BaselineManager.compare(tools, baseline);
+        setScanStatuses(res.tools);
 
-      const detectedDrifts = res.tools.filter(t => t.driftDetected);
-      if (detectedDrifts.length > 0) {
-        const events: DriftEvent[] = detectedDrifts.map(d => ({
-          eventId: `drift-${d.toolId}-${Date.now()}`,
-          projectId: activeWorkspace ? activeWorkspace.id : 'demo-project',
-          toolId: d.toolId,
-          toolName: d.name,
-          baselineId: baseline.baselineId,
-          scanId: `scan-${Date.now()}`,
-          detectedAt: new Date().toISOString(),
-          status: 'open',
-          severity: d.status === 'HIGH RISK' ? 'high' : 'medium',
-          changes: d.changes
-        }));
-        setDriftEvents(prev => {
-          const existingIds = new Set(prev.map(e => e.toolId));
-          const newOnes = events.filter(e => !existingIds.has(e.toolId));
-          return [...newOnes, ...prev];
-        });
-      } else {
-        setDriftEvents([]);
+        const detectedDrifts = res.tools.filter(t => t.driftDetected);
+        if (detectedDrifts.length > 0) {
+          setDriftEvents(prev => {
+            const updated: DriftEvent[] = [];
+            for (const d of detectedDrifts) {
+              const existing = prev.find(e => (e.toolId === d.toolId || e.toolName === d.name) && e.status === 'open');
+              if (existing) {
+                updated.push({
+                  ...existing,
+                  changes: (existing.changes && existing.changes.length > 0) ? existing.changes : d.changes
+                });
+              } else {
+                updated.push({
+                  eventId: `drift-${d.toolId}-${Date.now()}`,
+                  projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
+                  toolId: d.toolId,
+                  toolName: d.name,
+                  baselineId: baseline.baselineId,
+                  scanId: `scan-${Date.now()}`,
+                  detectedAt: new Date().toISOString(),
+                  status: 'open',
+                  severity: d.status === 'HIGH RISK' ? 'high' : 'medium',
+                  changes: d.changes
+                });
+              }
+            }
+            const resolved = prev.filter(e => e.status === 'resolved' || e.status === 'accepted');
+            return [...updated, ...resolved];
+          });
+        } else {
+          setDriftEvents(prev => prev.filter(e => e.status === 'resolved' || e.status === 'accepted'));
+        }
+      } catch (err) {
+        console.error('Comparison error:', err);
       }
-    } else {
-      setScanStatuses([]);
-      setDriftEvents([]);
     }
-  }, [tools, baseline, activeWorkspace?.id]);
+  }, [tools, baseline]);
 
-  // Auto-sync from CLI via URL hash #sync=<base64url>
+  // Auto-sync from CLI or VS Code via URL hash #sync=<base64url> or query ?sync=<base64url>
   useEffect(() => {
     const handleHashSync = async () => {
-      const hash = window.location.hash;
-      if (hash && hash.includes('sync=')) {
-        try {
-          const raw = hash.split('sync=')[1]?.split('&')[0];
-          if (raw) {
-            const base64 = raw.replace(/-/g, '+').replace(/_/g, '/');
-            const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
-            const binary = atob(padded);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-              bytes[i] = binary.charCodeAt(i);
-            }
+      const fullUrl = window.location.href;
+      const syncSource = window.location.hash || window.location.search;
+      if (!syncSource || !syncSource.includes('sync=')) {
+        lastProcessedHashRef.current = '';
+        return;
+      }
 
-            let jsonStr = '';
-            if (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b && typeof DecompressionStream !== 'undefined') {
-              const ds = new DecompressionStream('gzip');
-              const writer = ds.writable.getWriter();
-              writer.write(bytes);
-              writer.close();
-              jsonStr = await new Response(ds.readable).text();
-            } else {
-              jsonStr = decodeURIComponent(escape(binary));
-            }
+      const rawParam = syncSource.split('sync=')[1]?.split('&')[0];
+      if (!rawParam) return;
+      const raw = decodeURIComponent(rawParam);
+      if (raw === lastProcessedHashRef.current) return;
+      lastProcessedHashRef.current = raw;
+      isHashSyncActiveRef.current = true;
 
-            const payload = JSON.parse(jsonStr);
-            if (payload.baseline) {
-              importWorkspaceBaseline(payload.baseline, payload.name, payload.tools);
-              window.history.replaceState(null, '', window.location.pathname);
+      try {
+        const base64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+        const binary = atob(padded);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+
+        let jsonStr = '';
+        if (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b && typeof DecompressionStream !== 'undefined') {
+          try {
+            const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+            jsonStr = await new Response(stream).text();
+          } catch (decompErr) {
+            console.warn('[ToolGuard] Blob stream failed, falling back:', decompErr);
+            const ds = new DecompressionStream('gzip');
+            const writer = ds.writable.getWriter();
+            await writer.write(bytes);
+            await writer.close();
+            jsonStr = await new Response(ds.readable).text();
+          }
+        } else {
+          jsonStr = new TextDecoder().decode(bytes);
+        }
+
+        const payload = JSON.parse(jsonStr);
+
+        // V2 Compact Format: carries exact drift list & safe tool names (< 1500 bytes)
+        if (payload.v === 2 || Array.isArray(payload.drifts)) {
+          const projectName = payload.projectId || payload.name || 'Workspace';
+          const workspaceId = projectName.toLowerCase().replace(/[^a-z0-9_\-]/g, '-');
+
+          const safeNames: string[] = Array.isArray(payload.safeTools) ? payload.safeTools : [];
+          const drifts: any[] = Array.isArray(payload.drifts) ? payload.drifts : [];
+
+          // Rebuild tools array
+          const reconstructedTools: ToolDefinition[] = [];
+          for (const name of safeNames) {
+            reconstructedTools.push({
+              id: name,
+              name,
+              description: `${name} capability`,
+              version: '1.0.0',
+              permissions: ['read'],
+              endpoint: 'local',
+              execution: { enabled: false }
+            });
+          }
+          for (const d of drifts) {
+            const liveTool: ToolDefinition = d.current || {
+              id: d.toolId,
+              name: d.name,
+              description: d.name,
+              version: '1.0.0',
+              permissions: ['read', 'admin', 'network'],
+              endpoint: 'remote',
+              execution: { enabled: true }
+            };
+            reconstructedTools.push(liveTool);
+          }
+
+          // Build clean baseline matching safe tools
+          const safeToolsOnly = reconstructedTools.filter(t => !drifts.some(d => d.toolId === t.id || d.name === t.name));
+          const reconstructedBaseline = BaselineManager.createBaseline(
+            safeToolsOnly,
+            projectName,
+            'developer@workspace.local',
+            1
+          );
+
+          // If any drifted tool had an original baseline definition, attach it with its TRUE cryptographic SHA-256 fingerprint
+          for (const d of drifts) {
+            if (d.baseline) {
+              const norm = normalizeToolDefinition(redactSensitiveData(d.baseline));
+              const fp = (d.fingerprint && /^[a-f0-9]{64}$/i.test(d.fingerprint))
+                ? d.fingerprint
+                : computeFingerprint(norm).hash;
+
+              reconstructedBaseline.tools[d.toolId] = {
+                toolId: d.toolId,
+                name: d.name,
+                fingerprint: fp,
+                normalizedDefinition: norm,
+                createdAt: new Date().toISOString()
+              };
             }
           }
-        } catch (e) {
-          console.error('[ToolGuard] Auto-sync parse error:', e);
+          reconstructedBaseline.baselineId = payload.baselineId || reconstructedBaseline.baselineId;
+          reconstructedBaseline.toolCount = Object.keys(reconstructedBaseline.tools).length;
+
+          // Rebuild scan statuses with true SHA-256 fingerprints
+          const reconstructedScanStatuses: ToolScanStatus[] = [
+            ...safeNames.map(name => {
+              const baseEntry = reconstructedBaseline.tools[name];
+              const fp = baseEntry?.fingerprint || computeFingerprint(normalizeToolDefinition(redactSensitiveData({ id: name, name, permissions: ['read'], endpoint: 'local', execution: { enabled: false } }))).hash;
+              return {
+                toolId: name,
+                name,
+                status: 'SAFE' as const,
+                driftDetected: false,
+                changes: [],
+                fingerprint: fp,
+                baselineFingerprint: fp,
+                lastChecked: new Date().toISOString()
+              };
+            }),
+            ...drifts.map(d => ({
+              toolId: d.toolId,
+              name: d.name,
+              status: (d.status === 'REVIEW' ? 'REVIEW' : 'HIGH RISK') as TrustStatus,
+              driftDetected: true,
+              changes: d.changes || [],
+              fingerprint: computeFingerprint(normalizeToolDefinition(redactSensitiveData(d.current || { name: d.name }))).hash,
+              baselineFingerprint: reconstructedBaseline.tools[d.toolId]?.fingerprint || '',
+              lastChecked: new Date().toISOString()
+            }))
+          ];
+
+          // Rebuild drift events
+          const reconstructedEvents: DriftEvent[] = drifts.map(d => ({
+            eventId: `drift-${d.toolId}-${Date.now()}`,
+            projectId: workspaceId,
+            toolId: d.toolId,
+            toolName: d.name,
+            baselineId: reconstructedBaseline.baselineId,
+            scanId: `scan-${Date.now()}`,
+            detectedAt: new Date().toISOString(),
+            status: 'open' as const,
+            severity: d.severity || (d.status === 'HIGH RISK' ? 'high' as const : 'medium' as const),
+            changes: d.changes || []
+          }));
+
+          const newWorkspace: WorkspaceProfile = {
+            id: workspaceId,
+            name: projectName,
+            path: payload.workspacePath,
+            description: `Imported workspace (${payload.totalTools || reconstructedTools.length} tools monitored)`,
+            stack: 'Custom',
+            tools: reconstructedTools,
+            baseline: reconstructedBaseline,
+            createdAt: new Date().toISOString()
+          };
+
+          setWorkspaces(prev => {
+            const filtered = prev.filter(w => w.id !== workspaceId);
+            const updated = [newWorkspace, ...filtered];
+            try {
+              localStorage.setItem('toolguard_workspaces', JSON.stringify(updated));
+            } catch {}
+            return updated;
+          });
+
+          setActiveWorkspaceId(workspaceId);
+          try {
+            localStorage.setItem('toolguard_active_workspace', workspaceId);
+            localStorage.setItem('toolguard_sync_payload', jsonStr);
+          } catch {}
+
+          setTools(reconstructedTools);
+          setBaseline(reconstructedBaseline);
+          setScanStatuses(reconstructedScanStatuses);
+          setDriftEvents(reconstructedEvents);
+          setIsJudgeDemoActive(false);
+          setLastScanTime('Just now');
+
+          // Keep local bridge aligned with synced project
+          fetch('http://127.0.0.1:3154/api/workspace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cwd: payload.workspacePath || projectName,
+              workspacePath: payload.workspacePath
+            })
+          }).catch(() => {});
+
+          const hasDrift = drifts.length > 0 || (payload.driftCount && payload.driftCount > 0);
+          if (hasDrift || fullUrl.includes('/drift')) {
+            navigate('/drift');
+          } else {
+            navigate('/dashboard');
+          }
+
+          try {
+            if (window.history.replaceState) {
+              window.history.replaceState(null, '', hasDrift ? '/drift' : '/dashboard');
+            }
+          } catch {}
+          isHashSyncActiveRef.current = false;
+        } else if (payload.baseline) {
+          // Legacy format
+          importWorkspaceBaseline(payload.baseline, payload.name, payload.tools);
+          let hasDrift = false;
+          try {
+            const comp = BaselineManager.compare(payload.tools || [], payload.baseline);
+            hasDrift = comp.driftCount > 0;
+          } catch {}
+          if (hasDrift || fullUrl.includes('/drift')) {
+            navigate('/drift');
+          }
         }
+      } catch (e) {
+        console.error('[ToolGuard] Auto-sync parse error:', e);
       }
     };
 
     handleHashSync();
     window.addEventListener('hashchange', handleHashSync);
-    return () => window.removeEventListener('hashchange', handleHashSync);
-  }, []);
+    window.addEventListener('popstate', handleHashSync);
+    window.addEventListener('focus', handleHashSync);
+
+    const pollInterval = setInterval(() => {
+      const src = window.location.hash || window.location.search;
+      if (src && src.includes('sync=')) {
+        handleHashSync();
+      }
+    }, 400);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashSync);
+      window.removeEventListener('popstate', handleHashSync);
+      window.removeEventListener('focus', handleHashSync);
+      clearInterval(pollInterval);
+    };
+  }, [navigate]);
 
   // Switch workspace
   const switchWorkspace = (workspaceId: string) => {
@@ -389,10 +861,18 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       setWorkspaces(prev => {
         const filtered = prev.filter(w => w.id !== workspaceId);
-        return [newWorkspace, ...filtered];
+        const updated = [newWorkspace, ...filtered];
+        try {
+          localStorage.setItem('toolguard_workspaces', JSON.stringify(updated));
+        } catch {}
+        return updated;
       });
 
       setActiveWorkspaceId(workspaceId);
+      try {
+        localStorage.setItem('toolguard_active_workspace', workspaceId);
+      } catch {}
+
       setTools(activeTools);
       setBaseline(parsed);
       setIsJudgeDemoActive(false);
@@ -561,6 +1041,21 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
 
     setTools(drifted);
+    const res = BaselineManager.compare(drifted, DEMO_BASELINE);
+    setScanStatuses(res.tools);
+    const detected = res.tools.filter(t => t.driftDetected);
+    setDriftEvents(detected.map(d => ({
+      eventId: `drift-${d.toolId}-${Date.now()}`,
+      projectId: 'demo-app',
+      toolId: d.toolId,
+      toolName: d.name,
+      baselineId: DEMO_BASELINE.baselineId,
+      scanId: `scan-${Date.now()}`,
+      detectedAt: new Date().toISOString(),
+      status: 'open' as const,
+      severity: d.status === 'HIGH RISK' ? 'high' as const : 'medium' as const,
+      changes: d.changes
+    })));
   };
 
   const exitJudgeDemo = () => {
@@ -594,9 +1089,24 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Run Scan
   const triggerScan = async (): Promise<ScanResult | null> => {
     setIsVerifying(true);
-    await new Promise(r => setTimeout(r, 360));
     setLastScanTime('Just now');
     try {
+      if (isLocalConnected) {
+        try {
+          const res = await fetch('http://127.0.0.1:3154/api/scan', { method: 'POST' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.ok && data.scanResult) {
+              if (data.tools) setTools(data.tools);
+              if (data.baseline) setBaseline(data.baseline);
+              setScanStatuses(data.scanResult.tools);
+              return data.scanResult;
+            }
+          }
+        } catch {}
+      }
+
+      await new Promise(r => setTimeout(r, 260));
       if (tools.length > 0 && baseline && baseline.baselineId !== 'bl-empty') {
         const res = BaselineManager.compare(tools, baseline);
         setScanStatuses(res.tools);
@@ -647,34 +1157,255 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Accept drift and update baseline
   const acceptDriftEvent = async (eventId: string, toolId: string) => {
-    setDriftEvents(prev => prev.map(e => e.eventId === eventId ? { ...e, status: 'resolved' as const } : e));
+    // 1. Mark this drift event resolved
+    setDriftEvents(prev => prev.map(e =>
+      (e.eventId === eventId || e.toolId === toolId || e.toolName === toolId)
+        ? { ...e, status: 'resolved' as const }
+        : e
+    ));
+
+    // 2. Re-create baseline incorporating all current tools
     const projectId = activeWorkspace ? activeWorkspace.id : 'demo-project';
-    const newBl = BaselineManager.createBaseline(tools, projectId, 'developer@workspace.local', baseline.version + 1);
+    const nextVer = (baseline?.version || 1) + 1;
+    const nextVerTag = `v1.0.${nextVer - 1}`;
+    const newBl = BaselineManager.createBaseline(
+      tools,
+      projectId,
+      'developer@workspace.local',
+      nextVer
+    );
     setBaseline(newBl);
 
-    if (activeWorkspace) {
-      setWorkspaces(prev => prev.map(w => w.id === activeWorkspace.id ? { ...w, baseline: newBl, tools } : w));
+    // Record this accepted change in Version History
+    const targetEvent = driftEvents.find(e => e.eventId === eventId || e.toolId === toolId || e.toolName === toolId);
+    const affectedToolName = targetEvent?.toolName || toolId;
+
+    const changesList: VersionChangeItem[] = (targetEvent?.changes && targetEvent.changes.length > 0)
+      ? targetEvent.changes.map(c => ({
+          toolName: affectedToolName,
+          changeType: c.type === 'added' ? 'added' : (c.type === 'removed' ? 'removed' : 'modified'),
+          summary: `${c.path}: ${c.reason || c.whyItMatters || `${c.type} (${c.severity})`}`,
+          path: c.path,
+          before: c.before,
+          after: c.after
+        }))
+      : [{
+          toolName: affectedToolName,
+          changeType: 'modified',
+          summary: `Approved capability changes for "${affectedToolName}" into trusted baseline`
+        }];
+
+    const newVersionEntry: VersionHistoryEntry = {
+      version: nextVer,
+      versionTag: nextVerTag,
+      timestamp: new Date().toISOString(),
+      actor: 'developer@workspace.local',
+      action: 'ACCEPTED_DRIFT',
+      title: `Accepted capability drift for "${affectedToolName}"`,
+      toolCount: tools.length,
+      toolsAffected: [affectedToolName],
+      changes: changesList,
+      baselineHash: newBl.baselineId
+    };
+
+    let nextHistory: VersionHistoryEntry[] = [];
+    setVersionHistory(prev => {
+      nextHistory = [newVersionEntry, ...prev.filter(v => v.version !== nextVer)];
+      try {
+        localStorage.setItem('toolguard_version_history', JSON.stringify(nextHistory));
+      } catch {}
+      return nextHistory;
+    });
+
+    // 3. Immediately compare tools against new baseline -> exactly 0 drift
+    try {
+      const comp = BaselineManager.compare(tools, newBl);
+      setScanStatuses(comp.tools);
+    } catch {}
+
+    isHashSyncActiveRef.current = false;
+    driftEventsRef.current = [];
+    lastProcessedHashRef.current = '';
+    try {
+      localStorage.removeItem('toolguard_sync_payload');
+      if (window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch {}
+
+    // 4. Update workspace in state and localStorage
+    const currentWsId = activeWorkspace?.id || activeWorkspaceId || projectId;
+    const updatedProfile: WorkspaceProfile = {
+      id: currentWsId,
+      name: activeWorkspace?.name || projectId,
+      path: activeWorkspace?.path,
+      description: `Workspace (${tools.length} capabilities)`,
+      stack: 'Custom',
+      tools,
+      baseline: newBl,
+      createdAt: new Date().toISOString(),
+      versionHistory: nextHistory.length > 0 ? nextHistory : [newVersionEntry, ...(versionHistory || [])]
+    };
+
+    setWorkspaces(prev => {
+      const filtered = prev.filter(w => w.id !== currentWsId);
+      const updated = [updatedProfile, ...filtered];
+      try {
+        localStorage.setItem('toolguard_workspaces', JSON.stringify(updated));
+        localStorage.setItem('toolguard_active_workspace', currentWsId);
+      } catch {}
+      return updated;
+    });
+
+    // 5. Real-time synchronization to local IDE & disk baseline
+    let wsPath = (activeWorkspace as any)?.path;
+    if (!wsPath) {
+      try {
+        const storedSync = JSON.parse(localStorage.getItem('toolguard_sync_payload') || '{}');
+        wsPath = storedSync.workspacePath || storedSync.cwd;
+      } catch {}
     }
+    const wsName = activeWorkspace?.name || activeWorkspace?.id || 'ToolGuard';
+
+    const syncPayload = JSON.stringify({
+      eventId,
+      toolId,
+      baseline: newBl,
+      workspace: wsName,
+      cwd: wsPath,
+      workspacePath: wsPath
+    });
+
+    // 5a. Call local bridge server (works when running locally or if private network access is allowed)
+    try {
+      fetch('http://127.0.0.1:3154/api/accept-drift', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: syncPayload
+      }).then(r => r.json()).then(data => {
+        if (data?.ok) {
+          if (data.scanResult) setScanStatuses(data.scanResult.tools);
+          if (data.tools) setTools(data.tools);
+          if (data.baseline) setBaseline(data.baseline);
+        }
+      }).catch(() => {});
+    } catch {}
+
+    // 5b. Dual Trigger: Fire VS Code URI protocol handler as deep link fallback
+    // This bypasses browser Mixed Content restrictions on HTTPS cloud deployments (e.g. Vercel)
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = 'vscode://toolguard.toolguard-vscode/accept-drift';
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        try { document.body.removeChild(iframe); } catch {}
+      }, 1500);
+    } catch {}
   };
 
   // Create new baseline
   const createNewBaseline = async () => {
     const projectId = activeWorkspace ? activeWorkspace.id : 'demo-project';
-    const newBl = BaselineManager.createBaseline(tools, projectId, 'developer@workspace.local', baseline.version + 1);
+    const nextVer = (baseline?.version || 1) + 1;
+    const nextVerTag = `v1.0.${nextVer - 1}`;
+    const newBl = BaselineManager.createBaseline(tools, projectId, 'developer@workspace.local', nextVer);
     setBaseline(newBl);
     setDriftEvents([]);
+
+    const newVersionEntry: VersionHistoryEntry = {
+      version: nextVer,
+      versionTag: nextVerTag,
+      timestamp: new Date().toISOString(),
+      actor: 'developer@workspace.local',
+      action: 'BASELINE_CREATED',
+      title: `Baseline updated to ${nextVerTag}`,
+      toolCount: tools.length,
+      toolsAffected: tools.map(t => t.name || t.id || ''),
+      changes: [{
+        toolName: 'All tools',
+        changeType: 'modified',
+        summary: `Re-baselined ${tools.length} capabilities into version ${nextVerTag}`
+      }],
+      baselineHash: newBl.baselineId
+    };
+
+    let nextHistory: VersionHistoryEntry[] = [];
+    setVersionHistory(prev => {
+      nextHistory = [newVersionEntry, ...prev.filter(v => v.version !== nextVer)];
+      try {
+        localStorage.setItem('toolguard_version_history', JSON.stringify(nextHistory));
+      } catch {}
+      return nextHistory;
+    });
+
     if (activeWorkspace) {
-      setWorkspaces(prev => prev.map(w => w.id === activeWorkspace.id ? { ...w, baseline: newBl } : w));
+      setWorkspaces(prev => prev.map(w => w.id === activeWorkspace.id ? {
+        ...w,
+        baseline: newBl,
+        versionHistory: nextHistory
+      } : w));
     }
   };
 
   // Simulate drift
   const simulateDrift = async () => {
-    if (tools.length === 0) return;
-    const target = tools.find(t => t.name.includes('dev') || t.name === 'terminal') || tools[0];
+    if (isLocalConnected) {
+      try {
+        const res = await fetch('http://127.0.0.1:3154/api/threat-test', { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ok) {
+            const nextTools = data.tools || tools;
+            setTools(nextTools);
+            const statuses = data.scanResult?.tools || (baseline ? BaselineManager.compare(nextTools, baseline).tools : []);
+            setScanStatuses(statuses);
+            const detected = statuses.filter((t: any) => t.driftDetected);
+            if (detected.length > 0) {
+              const events: DriftEvent[] = detected.map((d: any) => ({
+                eventId: `drift-${Date.now()}-${d.toolId}`,
+                projectId: activeWorkspace ? activeWorkspace.id : (baseline?.projectId || 'local-workspace'),
+                toolId: d.toolId,
+                toolName: d.name,
+                baselineId: baseline?.baselineId || 'bl-local',
+                scanId: `scan-${Date.now()}`,
+                detectedAt: new Date().toISOString(),
+                status: 'open',
+                severity: d.status === 'HIGH RISK' ? 'high' : 'medium',
+                changes: d.changes || []
+              }));
+              setDriftEvents(events);
+              const audit: AuditEvent = {
+                auditId: `audit-${Date.now()}`,
+                action: 'DRIFT_DETECTED',
+                actorId: 'simulator',
+                projectId: activeWorkspace ? activeWorkspace.id : (baseline?.projectId || 'local-workspace'),
+                timestamp: new Date().toISOString(),
+                metadata: { details: `Unauthorized capability expansion detected on ${detected.map((d: any) => d.name).join(', ')}.` }
+              };
+              setAuditLogs(prev => [audit, ...prev]);
+            }
+            setLastScanTime('Just now');
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    let currentTools = tools;
+    let currentBaseline = baseline;
+
+    if (currentTools.length === 0 || !currentBaseline || currentBaseline.baselineId === 'bl-empty') {
+      currentTools = DEMO_TOOLS;
+      currentBaseline = DEMO_BASELINE;
+      setBaseline(DEMO_BASELINE);
+      setIsJudgeDemoActive(true);
+    }
+
+    const target = currentTools.find(t => t.name.includes('dev') || t.name === 'terminal') || currentTools[0];
     if (!target) return;
 
-    const updated = tools.map(t => {
+    const updated = currentTools.map(t => {
       if ((t.id && t.id === target.id) || t.name === target.name) {
         return {
           ...t,
@@ -693,17 +1424,17 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLastScanTime('Just now');
 
     // Immediately evaluate drift and surface alert
-    if (baseline && baseline.baselineId !== 'bl-empty') {
-      const res = BaselineManager.compare(updated, baseline);
+    if (currentBaseline && currentBaseline.baselineId !== 'bl-empty') {
+      const res = BaselineManager.compare(updated, currentBaseline);
       setScanStatuses(res.tools);
       const detected = res.tools.filter(t => t.driftDetected);
       if (detected.length > 0) {
         const events: DriftEvent[] = detected.map(d => ({
           eventId: `drift-${Date.now()}-${d.toolId}`,
-          projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
+          projectId: activeWorkspace ? activeWorkspace.id : (currentBaseline.projectId || 'project'),
           toolId: d.toolId,
           toolName: d.name,
-          baselineId: baseline.baselineId,
+          baselineId: currentBaseline.baselineId,
           scanId: `scan-${Date.now()}`,
           detectedAt: new Date().toISOString(),
           status: 'open',
@@ -715,7 +1446,7 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           auditId: `audit-${Date.now()}`,
           action: 'DRIFT_DETECTED',
           actorId: 'simulator',
-          projectId: activeWorkspace ? activeWorkspace.id : (baseline.projectId || 'project'),
+          projectId: activeWorkspace ? activeWorkspace.id : (currentBaseline.projectId || 'project'),
           timestamp: new Date().toISOString(),
           metadata: { details: `Unauthorized capability expansion injected on "${target.name}".` }
         };
@@ -726,13 +1457,53 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Reset to baseline
   const resetToBaseline = async () => {
+    isHashSyncActiveRef.current = false;
+    driftEventsRef.current = [];
+    lastProcessedHashRef.current = '';
+    setDriftEvents([]);
+
+    try {
+      localStorage.removeItem('toolguard_sync_payload');
+      if (window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch {}
+
+    let wsPath = (activeWorkspace as any)?.path;
+    if (!wsPath) {
+      try {
+        const storedSync = JSON.parse(localStorage.getItem('toolguard_sync_payload') || '{}');
+        wsPath = storedSync.workspacePath || storedSync.cwd;
+      } catch {}
+    }
+    const wsName = activeWorkspace?.name || activeWorkspace?.id || 'ToolGuard';
+
+    let cleanTools: ToolDefinition[] = [];
+    let targetBaseline = activeWorkspace?.baseline || baseline;
+
     if (isJudgeDemoActive) {
+      cleanTools = DEMO_TOOLS;
       setTools(DEMO_TOOLS);
       setBaseline(DEMO_BASELINE);
-      setDriftEvents([]);
-    } else if (activeWorkspace && activeWorkspace.baseline) {
-      // Reconstitute clean tools from baseline definitions
-      const cleanTools: ToolDefinition[] = Object.values(activeWorkspace.baseline.tools).map(entry => {
+      targetBaseline = DEMO_BASELINE;
+    } else if (targetBaseline && targetBaseline.tools && Object.keys(targetBaseline.tools).length > 0) {
+      // 1. Filter out any lingering threat simulation tools from targetBaseline
+      const cleanBaselineTools: Record<string, any> = {};
+      for (const [k, v] of Object.entries(targetBaseline.tools)) {
+        if (!k.toLowerCase().includes('threat') && !k.toLowerCase().includes('simulation') &&
+            !v.name.toLowerCase().includes('threat') && !v.name.toLowerCase().includes('simulation')) {
+          cleanBaselineTools[k] = v;
+        }
+      }
+
+      targetBaseline = {
+        ...targetBaseline,
+        tools: cleanBaselineTools,
+        toolCount: Object.keys(cleanBaselineTools).length
+      };
+
+      // 2. Extract clean tools strictly from baseline definitions
+      cleanTools = Object.values(cleanBaselineTools).map(entry => {
         const norm = entry.normalizedDefinition;
         return {
           id: entry.toolId,
@@ -747,20 +1518,97 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
 
       setTools(cleanTools);
-      setBaseline(activeWorkspace.baseline);
-      setDriftEvents([]);
-      const res = BaselineManager.compare(cleanTools, activeWorkspace.baseline);
-      setScanStatuses(res.tools);
-      const audit: AuditEvent = {
-        auditId: `audit-${Date.now()}`,
-        action: 'BASELINE_UPDATED',
-        actorId: 'developer',
-        projectId: activeWorkspace.id,
-        timestamp: new Date().toISOString(),
-        metadata: { details: `Workspace restored to trusted cryptographic baseline.` }
-      };
-      setAuditLogs(prev => [audit, ...prev]);
+      setBaseline(targetBaseline);
+    } else {
+      // Fallback: strip any simulated or threat tools from current tools
+      cleanTools = tools.filter(t => {
+        const name = (t.name || '').toLowerCase();
+        const id = (t.id || '').toLowerCase();
+        return !name.includes('threat') && !name.includes('simulation') &&
+               !id.includes('threat') && !id.includes('simulation');
+      });
+      targetBaseline = BaselineManager.createBaseline(cleanTools, wsName);
+      setTools(cleanTools);
+      setBaseline(targetBaseline);
     }
+
+    // 3. Immediately evaluate clean tools against targetBaseline -> exactly 0 drift
+    try {
+      const comp = BaselineManager.compare(cleanTools, targetBaseline);
+      setScanStatuses(comp.tools);
+    } catch {
+      setScanStatuses(cleanTools.map(t => ({
+        toolId: t.id || t.name,
+        name: t.name,
+        status: 'SAFE' as const,
+        driftDetected: false,
+        changes: [],
+        fingerprint: `safe-${t.id || t.name}`,
+        lastChecked: new Date().toISOString()
+      })));
+    }
+    setDriftEvents([]);
+    driftEventsRef.current = [];
+
+    // 4. Persist clean state to workspaces & localStorage
+    const currentWsId = activeWorkspace?.id || activeWorkspaceId || wsName;
+    const updatedProfile: WorkspaceProfile = {
+      id: currentWsId,
+      name: wsName,
+      path: wsPath,
+      description: `Workspace (${cleanTools.length} capabilities)`,
+      stack: 'Custom',
+      tools: cleanTools,
+      baseline: targetBaseline,
+      createdAt: new Date().toISOString()
+    };
+    setWorkspaces(prev => {
+      const filtered = prev.filter(w => w.id !== currentWsId);
+      const updated = [updatedProfile, ...filtered];
+      try {
+        localStorage.setItem('toolguard_workspaces', JSON.stringify(updated));
+        localStorage.setItem('toolguard_active_workspace', currentWsId);
+      } catch {}
+      return updated;
+    });
+
+    // 5. Notify bridge server
+    try {
+      fetch('http://127.0.0.1:3154/api/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspace: wsName, cwd: wsPath, workspacePath: wsPath })
+      }).then(r => r.json()).then(data => {
+        if (data?.ok) {
+          if (data.tools) setTools(data.tools);
+          if (data.baseline) setBaseline(data.baseline);
+          if (data.scanResult?.tools) setScanStatuses(data.scanResult.tools);
+          setDriftEvents([]);
+          driftEventsRef.current = [];
+        }
+      }).catch(() => {});
+    } catch {}
+
+    // 5b. Dual Trigger: Fire VS Code URI protocol handler as deep link fallback
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = 'vscode://toolguard.toolguard-vscode/restore';
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        try { document.body.removeChild(iframe); } catch {}
+      }, 1500);
+    } catch {}
+
+    const audit: AuditEvent = {
+      auditId: `audit-${Date.now()}`,
+      action: 'BASELINE_UPDATED',
+      actorId: 'developer',
+      projectId: activeWorkspace ? activeWorkspace.id : 'workspace',
+      timestamp: new Date().toISOString(),
+      metadata: { details: `Workspace restored to trusted cryptographic baseline.` }
+    };
+    setAuditLogs(prev => [audit, ...prev]);
   };
 
   const resetDemoData = () => {
@@ -782,7 +1630,11 @@ export const DemoDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         workspaces,
         activeWorkspaceId,
         activeWorkspace,
+        versionHistory,
+        currentVersionTag,
         isJudgeDemoActive,
+        isLocalConnected,
+        localDaemonInfo,
         switchWorkspace,
         importWorkspaceBaseline,
         exportActiveBaseline,

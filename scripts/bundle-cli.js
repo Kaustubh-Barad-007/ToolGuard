@@ -34,6 +34,30 @@ esbuild.buildSync({
 });
 console.log('   ✓ Bundled packages/cli/dist/cli.cjs');
 
+const webDistSource = path.join(rootDir, 'apps/web/dist');
+const webCopyFilter = (src) => {
+  const base = path.basename(src).toLowerCase();
+  return !base.endsWith('.tgz') && !base.endsWith('.vsix');
+};
+
+if (fs.existsSync(webDistSource)) {
+  fs.cpSync(webDistSource, path.join(cliDistDir, 'web'), { recursive: true, filter: webCopyFilter });
+  console.log('   ✓ Copied Web Dashboard to packages/cli/dist/web');
+
+  // Also copy to VS Code extension
+  const vsExtDir = path.join(rootDir, 'apps/vscode-extension/web');
+  fs.cpSync(webDistSource, vsExtDir, { recursive: true, filter: webCopyFilter });
+  console.log('   ✓ Copied Web Dashboard to apps/vscode-extension/web');
+
+  // And to installed VS Code extension if present
+  const userHome = process.env.USERPROFILE || process.env.HOME || '';
+  const installedExtWeb = path.join(userHome, '.vscode', 'extensions', 'toolguard.toolguard-vscode-1.0.0', 'web');
+  if (fs.existsSync(path.dirname(installedExtWeb))) {
+    fs.cpSync(webDistSource, installedExtWeb, { recursive: true, filter: webCopyFilter });
+    console.log('   ✓ Copied Web Dashboard to ~/.vscode/extensions/toolguard.toolguard-vscode-1.0.0/web');
+  }
+}
+
 // 2. Prepare packaging directory
 console.log('2. Creating standalone npm package structure...');
 const tempPackDir = path.join(rootDir, 'temp_pack');
@@ -47,6 +71,9 @@ fs.copyFileSync(
   path.join(cliDistDir, 'cli.cjs'),
   path.join(tempPackDir, 'bin', 'cli.cjs')
 );
+if (fs.existsSync(webDistSource)) {
+  fs.cpSync(webDistSource, path.join(tempPackDir, 'web'), { recursive: true, filter: webCopyFilter });
+}
 fs.writeFileSync(
   path.join(tempPackDir, 'bin', 'toolguard.js'),
   '#!/usr/bin/env node\nrequire("./cli.cjs");\n'
@@ -108,6 +135,8 @@ if (fs.existsSync(webDistDir)) {
   copyIfPresent('install.ps1');
   copyIfPresent('install.sh');
   copyIfPresent('toolguard-vscode-1.0.0.vsix');
+  copyIfPresent('ToolGuard_Live_Demo_Guide.docx');
+  copyIfPresent('vercel.json');
 }
 
 // 5. Clean up temporary directory

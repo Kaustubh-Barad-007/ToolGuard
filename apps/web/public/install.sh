@@ -5,7 +5,15 @@
 set -e
 
 echo ""
-echo -e "\033[36m  🛡️   ToolGuard Installer\033[0m"
+echo -e "\033[36m               /\\_____/\\               \033[0m"
+echo -e "\033[36m              /  \\   /  \\              \033[0m"
+echo -e "\033[36m             / /\\ \\ / /\\ \\             \033[0m"
+echo -e "\033[34m            | |  \\ V /  | |            \033[0m"
+echo -e "\033[34m            | |  /   \\  | |            \033[0m"
+echo -e "\033[36m             \\ \\/ / \\ \\/ /             \033[0m"
+echo -e "\033[36m              \\  /   \\  /              \033[0m"
+echo -e "\033[36m               \\/_____\\/               \033[0m"
+echo -e "\033[32m         🛡️   T O O L G U A R D        \033[0m"
 echo -e "\033[90m  ──────────────────────────────────────────\033[0m"
 echo -e "\033[37m  Zero-Trust Capability Security for AI Tools\033[0m"
 echo ""

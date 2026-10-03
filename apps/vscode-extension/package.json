@@ -4,6 +4,10 @@
   "description": "You trusted the tool. Did the tool stay the same? Trust drift detection for developer and AI tools.",
   "version": "1.0.0",
   "publisher": "toolguard",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kaustubh-Barad-007/ToolGuard"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -12,6 +16,7 @@
     "Linters",
     "Other"
   ],
+  "icon": "icon.png",
   "main": "./dist/extension.js",
   "activationEvents": [
     "*",
@@ -63,6 +68,21 @@
         "category": "ToolGuard"
       },
       {
+        "command": "toolguard.openDashboardInIde",
+        "title": "ToolGuard: Open Dashboard in IDE",
+        "category": "ToolGuard"
+      },
+      {
+        "command": "toolguard.openDashboardInBrowser",
+        "title": "ToolGuard: Open Dashboard in Browser (Local)",
+        "category": "ToolGuard"
+      },
+      {
+        "command": "toolguard.restoreCleanState",
+        "title": "ToolGuard: Restore Clean Baseline (Reject Threat)",
+        "category": "ToolGuard"
+      },
+      {
         "command": "toolguard.explainDrift",
         "title": "ToolGuard: Explain Drift",
         "category": "ToolGuard"
@@ -78,8 +98,18 @@
       "properties": {
         "toolguard.dashboardUrl": {
           "type": "string",
-          "default": "https://toolguard-app.vercel.app",
-          "description": "URL of the ToolGuard Web Dashboard"
+          "default": "http://127.0.0.1:3154",
+          "description": "URL of the ToolGuard Web Dashboard (default: local offline bridge http://127.0.0.1:3154)"
+        },
+        "toolguard.openTarget": {
+          "type": "string",
+          "enum": [
+            "prompt",
+            "ide",
+            "browser"
+          ],
+          "default": "prompt",
+          "description": "Where to open the ToolGuard dashboard: prompt each time, inside the IDE internal tab, or in external browser"
         },
         "toolguard.scanOnSave": {
           "type": "boolean",

@@ -54,14 +54,14 @@ const NAV_GROUPS = [
     title: 'MONITORING',
     items: [
       { label: 'Overview', path: '/dashboard', icon: <DashboardOutlinedIcon sx={{ fontSize: 18 }} /> },
-      { label: 'Drift Incidents', path: '/drift', icon: <WarningAmberIcon sx={{ fontSize: 18 }} />, badgeKey: 'drift' },
+      { label: 'Drift Events', path: '/drift', icon: <WarningAmberIcon sx={{ fontSize: 18 }} />, badgeKey: 'drift' },
     ]
   },
   {
     title: 'DEVELOPER',
     items: [
       { label: 'IDE & CLI', path: '/integrations', icon: <HubOutlinedIcon sx={{ fontSize: 18 }} /> },
-      { label: 'Rules & Policies', path: '/settings', icon: <SettingsOutlinedIcon sx={{ fontSize: 18 }} /> },
+      { label: 'Settings', path: '/settings', icon: <SettingsOutlinedIcon sx={{ fontSize: 18 }} /> },
     ]
   }
 ];
@@ -77,12 +77,13 @@ export const AppShell: React.FC = () => {
 
   const {
     driftEvents,
+    scanStatuses,
     workspaces,
     activeWorkspaceId,
     activeWorkspace,
     isJudgeDemoActive,
+    isLocalConnected,
     isVerifying,
-    loadJudgeDemo,
     exitJudgeDemo,
     switchWorkspace,
     importWorkspaceBaseline,
@@ -112,7 +113,10 @@ export const AppShell: React.FC = () => {
     setTimeout(() => setCopiedInstallCmd(false), 2000);
   };
 
-  const openDriftCount = driftEvents.filter(e => e.status === 'open').length;
+  const openDriftCount = Math.max(
+    driftEvents.filter(e => e.status === 'open').length,
+    scanStatuses?.filter(t => t.driftDetected).length || 0
+  );
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -151,19 +155,25 @@ export const AppShell: React.FC = () => {
     }
   };
 
-  const handleJudgeDemoClick = () => {
-    loadJudgeDemo();
-    navigate('/drift');
-  };
+  React.useEffect(() => {
+    const titles: Record<string, string> = {
+      '/': 'ToolGuard — Overview',
+      '/dashboard': 'ToolGuard — Overview',
+      '/drift': 'ToolGuard — Drift Events',
+      '/integrations': 'ToolGuard — IDE & CLI',
+      '/settings': 'ToolGuard — Settings'
+    };
+    document.title = titles[location.pathname] || 'ToolGuard';
+  }, [location.pathname]);
 
-  // ── Crisp, authentic developer tool styling tokens ────────────────────────
-  const bgMain     = isDark ? '#0C0E14' : '#F8FAFC';
-  const sidebarBg  = isDark ? '#10131B' : '#FFFFFF';
-  const borderCol  = isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0';
-  const textMuted  = isDark ? '#8590A6' : '#64748B';
-  const textHeader = isDark ? '#EDF2F7' : '#0F172A';
-  const accent     = isDark ? '#00D4AA' : '#009E7E';
-  const dangerCol  = isDark ? '#FF4D6A' : '#E11D48';
+  // ── Supabase Studio authentic styling tokens ──────────────────────────────
+  const bgMain     = isDark ? '#121212' : '#F8F9FA';
+  const sidebarBg  = isDark ? '#1C1C1C' : '#FFFFFF';
+  const borderCol  = isDark ? '#2E2E2E' : '#E5E7EB';
+  const textMuted  = isDark ? '#9E9E9E' : '#6B7280';
+  const textHeader = isDark ? '#EDEDED' : '#111827';
+  const accent     = isDark ? '#3ECF8E' : '#00C475';
+  const dangerCol  = isDark ? '#FA5252' : '#DC2626';
 
   const drawerContent = (
     <Box sx={{
@@ -180,22 +190,19 @@ export const AppShell: React.FC = () => {
           sx={{ display: 'flex', alignItems: 'center', gap: 1.25, cursor: 'pointer', mb: 2 }}
         >
           <Box
+            component="img"
+            src="/logo.png"
+            alt="ToolGuard"
             sx={{
-              width: 28,
-              height: 28,
-              borderRadius: '7px',
-              overflow: 'hidden',
-              backgroundColor: '#ffffff',
+              width: 36,
+              height: 36,
+              borderRadius: '8px',
+              objectFit: 'cover',
+              flexShrink: 0,
               border: `1px solid ${borderCol}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
             }}
-          >
-            <Box component="img" src="/logo.png" alt="Logo" sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-          </Box>
-          <Typography sx={{ fontWeight: 800, fontSize: '0.94rem', color: textHeader, letterSpacing: '-0.02em' }}>
+          />
+          <Typography sx={{ fontWeight: 700, fontSize: '0.94rem', color: textHeader, letterSpacing: '-0.02em' }}>
             ToolGuard
           </Typography>
           <Chip
@@ -205,7 +212,7 @@ export const AppShell: React.FC = () => {
               height: 18,
               fontSize: '0.62rem',
               fontWeight: 700,
-              backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+              backgroundColor: isDark ? '#242424' : '#F3F4F6',
               color: textMuted,
               borderRadius: '4px',
               ml: 'auto'
@@ -222,14 +229,14 @@ export const AppShell: React.FC = () => {
             justifyContent: 'space-between',
             px: 1.25,
             py: 0.9,
-            borderRadius: '8px',
-            backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC',
+            borderRadius: '6px',
+            backgroundColor: isDark ? '#171717' : '#F9FAFB',
             border: `1px solid ${borderCol}`,
             cursor: 'pointer',
             transition: 'all 0.15s ease',
             '&:hover': {
-              backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
-              borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#CBD5E1'
+              backgroundColor: isDark ? '#222222' : '#F3F4F6',
+              borderColor: isDark ? '#404040' : '#D1D5DB'
             }
           }}
         >
@@ -237,7 +244,7 @@ export const AppShell: React.FC = () => {
             <FolderOutlinedIcon sx={{ fontSize: 16, color: textMuted }} />
             <Typography sx={{
               fontSize: '0.82rem',
-              fontWeight: 650,
+              fontWeight: 600,
               color: textHeader,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -256,7 +263,7 @@ export const AppShell: React.FC = () => {
           <Box key={group.title} sx={{ mb: gIdx < NAV_GROUPS.length - 1 ? 2.5 : 0 }}>
             <Typography sx={{
               fontSize: '0.68rem',
-              fontWeight: 700,
+              fontWeight: 650,
               color: textMuted,
               letterSpacing: '0.06em',
               px: 1.25,
@@ -273,27 +280,27 @@ export const AppShell: React.FC = () => {
                       selected={isSelected}
                       onClick={() => { navigate(item.path); if (isMobile) setMobileOpen(false); }}
                       sx={{
-                        borderRadius: '7px',
+                        borderRadius: '6px',
                         py: 0.75,
                         px: 1.25,
                         minHeight: 36,
-                        color: isSelected ? textHeader : textMuted,
+                        color: isSelected ? (isDark ? '#EDEDED' : '#111827') : textMuted,
                         backgroundColor: isSelected
-                          ? (isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9')
+                          ? (isDark ? 'rgba(62, 207, 142, 0.08)' : 'rgba(0, 196, 117, 0.08)')
                           : 'transparent',
                         border: isSelected
-                          ? `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0'}`
+                          ? `1px solid ${isDark ? 'rgba(62, 207, 142, 0.25)' : 'rgba(0, 196, 117, 0.25)'}`
                           : '1px solid transparent',
                         transition: 'all 0.15s ease',
                         '&:hover': {
-                          backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC',
+                          backgroundColor: isDark ? '#222222' : '#F3F4F6',
                           color: textHeader
                         }
                       }}
                     >
                       <ListItemIcon sx={{
                         minWidth: 28,
-                        color: isSelected ? (isDark ? accent : '#009E7E') : textMuted,
+                        color: isSelected ? accent : textMuted,
                         transition: 'color 0.15s'
                       }}>
                         {item.icon}
@@ -302,7 +309,7 @@ export const AppShell: React.FC = () => {
                         primary={item.label}
                         primaryTypographyProps={{
                           fontSize: '0.82rem',
-                          fontWeight: isSelected ? 650 : 500,
+                          fontWeight: isSelected ? 600 : 500,
                           color: 'inherit',
                           letterSpacing: '-0.01em'
                         }}
@@ -349,10 +356,10 @@ export const AppShell: React.FC = () => {
               width: 6,
               height: 6,
               borderRadius: '50%',
-              backgroundColor: openDriftCount > 0 ? dangerCol : accent
+              backgroundColor: openDriftCount > 0 ? dangerCol : (isLocalConnected ? accent : '#3B82F6')
             }} />
             <Typography sx={{ fontSize: '0.74rem', fontWeight: 600, color: textHeader }}>
-              {openDriftCount > 0 ? 'Drift detected' : 'Engine active'}
+              {openDriftCount > 0 ? 'Drift detected' : (isLocalConnected ? 'IDE Live Sync' : 'Engine active')}
             </Typography>
           </Box>
           <Typography sx={{ fontSize: '0.68rem', fontFamily: '"JetBrains Mono", monospace', color: textMuted }}>
@@ -372,14 +379,14 @@ export const AppShell: React.FC = () => {
         sx={{
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           ml: { md: `${DRAWER_WIDTH}px` },
-          backgroundColor: isDark ? 'rgba(16, 19, 27, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+          backgroundColor: isDark ? 'rgba(28, 28, 28, 0.85)' : 'rgba(255, 255, 255, 0.85)',
           backdropFilter: 'blur(12px)',
           borderBottom: `1px solid ${borderCol}`,
           zIndex: 1100,
         }}
       >
         <Toolbar variant="dense" sx={{ justifyContent: 'space-between', px: { xs: 2, md: 3 }, minHeight: '48px !important' }}>
-          {/* Breadcrumb Navigation */}
+          {/* Breadcrumb Navigation & Real-time Live Connection */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {isMobile && (
               <IconButton size="small" onClick={() => setMobileOpen(!mobileOpen)} sx={{ color: textHeader, mr: 0.5 }}>
@@ -387,13 +394,82 @@ export const AppShell: React.FC = () => {
               </IconButton>
             )}
 
-            <Typography sx={{ fontSize: '0.78rem', color: textMuted, fontWeight: 500 }}>
-              Projects
-            </Typography>
+            <Box
+              onClick={() => navigate('/dashboard')}
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.85, cursor: 'pointer', mr: 0.5 }}
+            >
+              <Box
+                component="img"
+                src="/logo.png"
+                alt="ToolGuard"
+                sx={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: '5px',
+                  objectFit: 'cover',
+                  border: `1px solid ${borderCol}`
+                }}
+              />
+              <Typography sx={{ fontSize: '0.84rem', color: textHeader, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                ToolGuard
+              </Typography>
+            </Box>
             <Typography sx={{ fontSize: '0.78rem', color: textMuted }}>/</Typography>
-            <Typography sx={{ fontSize: '0.82rem', color: textHeader, fontWeight: 650 }}>
+            <Typography sx={{ fontSize: '0.82rem', color: textHeader, fontWeight: 600 }}>
               {activeWorkspace?.name || 'Workspace'}
             </Typography>
+
+            {/* Real-time IDE connection pill */}
+            {isLocalConnected ? (
+              <Tooltip title="Real-time live sync connected with your local IDE (127.0.0.1:3154)">
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.75,
+                  ml: 1.5,
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: '12px',
+                  backgroundColor: isDark ? 'rgba(62, 207, 142, 0.12)' : 'rgba(0, 196, 117, 0.1)',
+                  border: `1px solid ${isDark ? 'rgba(62, 207, 142, 0.3)' : 'rgba(0, 196, 117, 0.25)'}`
+                }}>
+                  <Box sx={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    backgroundColor: accent,
+                    boxShadow: `0 0 6px ${accent}`
+                  }} />
+                  <Typography sx={{ fontSize: '0.68rem', fontWeight: 650, color: accent }}>
+                    IDE Live Sync
+                  </Typography>
+                </Box>
+              </Tooltip>
+            ) : (
+              <Tooltip title="Open in VS Code, Cursor, Windsurf, or run 'toolguard serve' for real-time live sync">
+                <Box sx={{
+                  display: { xs: 'none', sm: 'flex' },
+                  alignItems: 'center',
+                  gap: 0.75,
+                  ml: 1.5,
+                  px: 0.9,
+                  py: 0.2,
+                  borderRadius: '12px',
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F3F4F6',
+                  border: `1px solid ${borderCol}`
+                }}>
+                  <Box sx={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: '50%',
+                    backgroundColor: textMuted
+                  }} />
+                  <Typography sx={{ fontSize: '0.66rem', fontWeight: 500, color: textMuted }}>
+                    Standalone Mode
+                  </Typography>
+                </Box>
+              </Tooltip>
+            )}
           </Box>
 
           {/* Right Toolbar Actions */}
@@ -405,37 +481,17 @@ export const AppShell: React.FC = () => {
               startIcon={<TerminalOutlinedIcon sx={{ fontSize: '14px !important' }} />}
               sx={{
                 textTransform: 'none',
-                fontWeight: 650,
+                fontWeight: 600,
                 fontSize: '0.76rem',
                 borderRadius: '6px',
                 borderColor: borderCol,
                 color: textHeader,
                 py: 0.4,
                 px: 1.25,
-                '&:hover': { borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#CBD5E1' }
+                '&:hover': { borderColor: isDark ? '#404040' : '#D1D5DB', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB' }
               }}
             >
               Install CLI
-            </Button>
-
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={handleJudgeDemoClick}
-              startIcon={<BoltIcon sx={{ fontSize: '14px !important' }} />}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 650,
-                fontSize: '0.76rem',
-                borderRadius: '6px',
-                borderColor: borderCol,
-                color: textHeader,
-                py: 0.4,
-                px: 1.25,
-                '&:hover': { borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#CBD5E1' }
-              }}
-            >
-              Simulate Drift
             </Button>
 
             <Tooltip title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
@@ -447,7 +503,7 @@ export const AppShell: React.FC = () => {
                   border: `1px solid ${borderCol}`,
                   borderRadius: '6px',
                   p: 0.6,
-                  '&:hover': { color: textHeader, borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#CBD5E1' }
+                  '&:hover': { color: textHeader, borderColor: isDark ? '#404040' : '#D1D5DB' }
                 }}
               >
                 {isDark ? <Brightness7Icon sx={{ fontSize: 16 }} /> : <Brightness4Icon sx={{ fontSize: 16 }} />}
@@ -463,7 +519,7 @@ export const AppShell: React.FC = () => {
               left: 0,
               right: 0,
               height: 2,
-              background: 'linear-gradient(90deg, #10b981 0%, #6366f1 50%, #10b981 100%)',
+              background: 'linear-gradient(90deg, #3ECF8E 0%, #3E7BFA 50%, #3ECF8E 100%)',
               backgroundSize: '200% 100%',
               animation: 'shimmerScan 1.2s infinite linear'
             }}
@@ -481,8 +537,8 @@ export const AppShell: React.FC = () => {
             backgroundColor: sidebarBg,
             border: `1px solid ${borderCol}`,
             minWidth: 240,
-            borderRadius: '10px',
-            boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.5)' : '0 8px 24px rgba(15,23,42,0.08)',
+            borderRadius: '8px',
+            boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.6)' : '0 8px 24px rgba(0,0,0,0.06)',
             py: 0.5
           }
         }}
@@ -570,12 +626,12 @@ export const AppShell: React.FC = () => {
           sx: {
             backgroundColor: sidebarBg,
             border: `1px solid ${borderCol}`,
-            borderRadius: '12px',
+            borderRadius: '8px',
             p: 0.5
           }
         }}
       >
-        <DialogTitle sx={{ fontWeight: 750, fontSize: '1rem', color: textHeader }}>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem', color: textHeader }}>
           Import Project Baseline
         </DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
@@ -617,7 +673,7 @@ export const AppShell: React.FC = () => {
               '& .MuiInputBase-root': {
                 fontFamily: '"JetBrains Mono", monospace',
                 fontSize: '0.78rem',
-                backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#F8FAFC',
+                backgroundColor: isDark ? '#141414' : '#F4F4F5',
                 borderRadius: '6px'
               }
             }}
@@ -630,7 +686,7 @@ export const AppShell: React.FC = () => {
           <Button
             variant="contained"
             onClick={handleExecuteImport}
-            sx={{ textTransform: 'none', fontWeight: 650, borderRadius: '6px', fontSize: '0.82rem' }}
+            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem' }}
           >
             Import Baseline
           </Button>
@@ -647,13 +703,26 @@ export const AppShell: React.FC = () => {
           sx: {
             backgroundColor: sidebarBg,
             border: `1px solid ${borderCol}`,
-            borderRadius: '12px',
+            borderRadius: '8px',
             p: 1
           }
         }}
       >
-        <DialogTitle sx={{ fontWeight: 750, fontSize: '1.05rem', color: textHeader, pb: 1 }}>
-          Install ToolGuard CLI &amp; IDE Extension
+        <DialogTitle sx={{ fontWeight: 700, fontSize: '1.05rem', color: textHeader, pb: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            component="img"
+            src="/logo.png"
+            alt="ToolGuard"
+            sx={{ width: 40, height: 40, borderRadius: '10px', objectFit: 'cover', border: `1px solid ${borderCol}`, flexShrink: 0 }}
+          />
+          <Box>
+            <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: textHeader }}>
+              Install ToolGuard CLI &amp; IDE Extension
+            </Typography>
+            <Typography sx={{ fontSize: '0.72rem', color: textMuted, fontWeight: 500 }}>
+              Zero-Trust Verification Engine
+            </Typography>
+          </Box>
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ color: textMuted, fontSize: '0.82rem', mb: 2 }}>
@@ -669,11 +738,11 @@ export const AppShell: React.FC = () => {
               sx={{
                 height: 24,
                 fontSize: '0.72rem',
-                fontWeight: 650,
+                fontWeight: 600,
                 borderRadius: '6px',
-                backgroundColor: installTab === 'windows' ? (isDark ? 'rgba(0, 212, 170, 0.15)' : 'rgba(0, 139, 114, 0.12)') : 'transparent',
-                color: installTab === 'windows' ? (isDark ? '#00d4aa' : '#008b72') : textMuted,
-                border: `1px solid ${installTab === 'windows' ? (isDark ? '#00d4aa' : '#008b72') : borderCol}`,
+                backgroundColor: installTab === 'windows' ? (isDark ? 'rgba(62, 207, 142, 0.15)' : 'rgba(0, 196, 117, 0.12)') : 'transparent',
+                color: installTab === 'windows' ? accent : textMuted,
+                border: `1px solid ${installTab === 'windows' ? accent : borderCol}`,
               }}
             />
             <Chip
@@ -684,11 +753,11 @@ export const AppShell: React.FC = () => {
               sx={{
                 height: 24,
                 fontSize: '0.72rem',
-                fontWeight: 650,
+                fontWeight: 600,
                 borderRadius: '6px',
-                backgroundColor: installTab === 'mac' ? (isDark ? 'rgba(0, 212, 170, 0.15)' : 'rgba(0, 139, 114, 0.12)') : 'transparent',
-                color: installTab === 'mac' ? (isDark ? '#00d4aa' : '#008b72') : textMuted,
-                border: `1px solid ${installTab === 'mac' ? (isDark ? '#00d4aa' : '#008b72') : borderCol}`,
+                backgroundColor: installTab === 'mac' ? (isDark ? 'rgba(62, 207, 142, 0.15)' : 'rgba(0, 196, 117, 0.12)') : 'transparent',
+                color: installTab === 'mac' ? accent : textMuted,
+                border: `1px solid ${installTab === 'mac' ? accent : borderCol}`,
               }}
             />
             <Chip
@@ -699,11 +768,11 @@ export const AppShell: React.FC = () => {
               sx={{
                 height: 24,
                 fontSize: '0.72rem',
-                fontWeight: 650,
+                fontWeight: 600,
                 borderRadius: '6px',
-                backgroundColor: installTab === 'npm' ? (isDark ? 'rgba(0, 212, 170, 0.15)' : 'rgba(0, 139, 114, 0.12)') : 'transparent',
-                color: installTab === 'npm' ? (isDark ? '#00d4aa' : '#008b72') : textMuted,
-                border: `1px solid ${installTab === 'npm' ? (isDark ? '#00d4aa' : '#008b72') : borderCol}`,
+                backgroundColor: installTab === 'npm' ? (isDark ? 'rgba(62, 207, 142, 0.15)' : 'rgba(0, 196, 117, 0.12)') : 'transparent',
+                color: installTab === 'npm' ? accent : textMuted,
+                border: `1px solid ${installTab === 'npm' ? accent : borderCol}`,
               }}
             />
           </Box>
@@ -713,9 +782,9 @@ export const AppShell: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: isDark ? '#080c10' : '#f6f8fa',
+              backgroundColor: isDark ? '#141414' : '#F4F4F5',
               border: `1px solid ${borderCol}`,
-              borderRadius: '8px',
+              borderRadius: '6px',
               p: 1.5,
               mb: 2
             }}
@@ -736,7 +805,7 @@ export const AppShell: React.FC = () => {
               <IconButton
                 size="small"
                 onClick={() => handleCopyInstallCmd(installCommands[installTab])}
-                sx={{ ml: 1, color: copiedInstallCmd ? (isDark ? '#00d4aa' : '#008b72') : textMuted }}
+                sx={{ ml: 1, color: copiedInstallCmd ? accent : textMuted }}
               >
                 {copiedInstallCmd ? <CheckIcon sx={{ fontSize: 16 }} /> : <ContentCopyIcon sx={{ fontSize: 16 }} />}
               </IconButton>
@@ -758,7 +827,7 @@ export const AppShell: React.FC = () => {
             variant="contained"
             onClick={() => handleCopyInstallCmd(installCommands[installTab])}
             startIcon={copiedInstallCmd ? <CheckIcon sx={{ fontSize: 14 }} /> : <ContentCopyIcon sx={{ fontSize: 14 }} />}
-            sx={{ textTransform: 'none', fontWeight: 650, borderRadius: '6px', fontSize: '0.82rem' }}
+            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px', fontSize: '0.82rem' }}
           >
             {copiedInstallCmd ? 'Copied!' : 'Copy Command'}
           </Button>
@@ -817,6 +886,39 @@ export const AppShell: React.FC = () => {
             }}
           >
             <strong>Simulation Active:</strong> Testing unauthorized capability drift on <code>npm:dev</code>.
+          </Alert>
+        )}
+        {openDriftCount > 0 && location.pathname !== '/drift' && location.pathname !== '/dashboard' && (
+          <Alert
+            severity="error"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                variant="outlined"
+                onClick={() => navigate('/drift')}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  borderRadius: '6px',
+                  borderColor: 'currentColor',
+                  px: 1.5,
+                  py: 0.3
+                }}
+              >
+                Review Threat in Inspector →
+              </Button>
+            }
+            sx={{
+              mb: 3,
+              borderRadius: '8px',
+              border: `1px solid ${isDark ? 'rgba(250, 82, 82, 0.4)' : '#FECACA'}`,
+              backgroundColor: isDark ? 'rgba(250, 82, 82, 0.1)' : '#FEF2F2',
+              fontSize: '0.84rem'
+            }}
+          >
+            <strong>Security Alert:</strong> {openDriftCount} unauthorized capability drift(s) detected in active workspace.
           </Alert>
         )}
         <Outlet />

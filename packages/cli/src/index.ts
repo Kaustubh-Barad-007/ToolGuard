@@ -1,17 +1,48 @@
 import { Command } from 'commander';
 import * as path from 'path';
 import * as zlib from 'zlib';
+import * as readline from 'readline';
 import { promises as fs, watch } from 'fs';
 import { exec } from 'child_process';
 import {
   BaselineManager,
   formatDriftExplanation,
   discoverWorkspaceTools,
-  FileBaselineStorage
+  FileBaselineStorage,
+  startBridgeServer
 } from '@toolguard/core/node';
 import { ToolDefinition, ScanResult, RiskSeverity, stripBom } from '@toolguard/shared';
 
 const program = new Command();
+
+function askPermission(question: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!process.stdin.isTTY) {
+      resolve(false);
+      return;
+    }
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    rl.question(question, (answer) => {
+      rl.close();
+      const clean = answer.trim().toLowerCase();
+      resolve(clean === 'y' || clean === 'yes');
+    });
+  });
+}
+
+const CLI_BANNER = `
+               /\\_____/\\
+              /  \\   /  \\
+             / /\\ \\ / /\\ \\
+            | |  \\ V /  | |   🛡️  ToolGuard v1.0.0
+            | |  /   \\  | |   Zero-Trust Capability Security Engine
+             \\ \\/ / \\ \\/ /
+              \\  /   \\  /
+               \\/_____\\/
+`;
 
 program
   .name('toolguard')
@@ -25,7 +56,7 @@ program
   .option('-y, --yes', 'Automatically confirm baseline creation', false)
   .action(async (options) => {
     const cwd = process.cwd();
-    console.log('\n🛡 ToolGuard\n');
+    console.log(CLI_BANNER);
     console.log('Scanning workspace with universal discovery...');
 
     try {
@@ -65,6 +96,29 @@ program
       console.log('\nCreating trusted baseline...');
       const baseline = BaselineManager.createBaseline(tools, path.basename(cwd));
       await FileBaselineStorage.saveLocalBaseline(cwd, baseline);
+      try {
+        const toolNames = Object.keys(baseline.tools || {});
+        await FileBaselineStorage.appendLocalHistory(cwd, {
+          version: 1,
+          versionTag: 'v1.0.0',
+          timestamp: baseline.createdAt,
+          actor: baseline.createdBy || 'developer',
+          action: 'INITIALIZED',
+          title: 'Initial Zero-Trust Baseline Established',
+          toolCount: baseline.toolCount || toolNames.length,
+          toolsAffected: toolNames,
+          changes: toolNames.map(name => {
+            const entry = baseline.tools[name];
+            const perms = entry?.normalizedDefinition?.permissions || [];
+            return {
+              toolName: name,
+              changeType: 'added' as const,
+              summary: `${entry?.normalizedDefinition?.description || name} (${perms.length > 0 ? perms.join(', ') : 'no permissions'})`
+            };
+          }),
+          baselineHash: baseline.baselineId
+        });
+      } catch {}
 
       console.log(`✓ Trusted baseline created at .toolguard/baseline.json (${baseline.toolCount} tools recorded)`);
 
@@ -193,13 +247,16 @@ program
       const initialResult = await doScan();
       if (!initialResult) process.exit(2);
 
-      // If threat/drift detected and project baseline is connected, automatically sync & open dashboard
+      // If threat/drift detected, ask permission before opening dashboard
       if (initialResult.driftCount > 0) {
         const baseline = await FileBaselineStorage.loadLocalBaseline(cwd);
         if (baseline && !options.ci) {
           console.log(`🔗 Project "${baseline.projectId}" is connected.`);
-          console.log('✓ Automatically updating live drift state on ToolGuard Dashboard...\n');
-          await openDashboard(cwd);
+          if (options.web) {
+            await openDashboard(cwd);
+          } else {
+            console.log('💡 Tip: Click "Open Dashboard" in your IDE or run `toolguard dashboard` to inspect.\n');
+          }
         } else if (options.web) {
           await openDashboard(cwd);
         }
@@ -209,6 +266,16 @@ program
 
       if (options.watch) {
         console.log('👀 Watching workspace tools in real-time... (Press Ctrl+C to stop)\n');
+        try {
+          await startBridgeServer({
+            cwd,
+            onLog: (msg) => console.log(msg),
+            onStateChange: () => {
+              console.log('\n[Web Sync] Drift resolved via Web UI — re-verifying workspace...');
+              triggerWatchScan();
+            }
+          });
+        } catch {}
         let scanTimeout: NodeJS.Timeout | null = null;
         const triggerWatchScan = () => {
           if (scanTimeout) clearTimeout(scanTimeout);
@@ -269,7 +336,8 @@ program
   .description('One-command instant setup: discovers tools, freezes baseline, and verifies security')
   .action(async () => {
     const cwd = process.cwd();
-    console.log('\n⚡ ToolGuard Instant Quickstart\n──────────────────────────────');
+    console.log(CLI_BANNER);
+    console.log('⚡ ToolGuard Instant Quickstart\n──────────────────────────────');
     let baseline = await FileBaselineStorage.loadLocalBaseline(cwd);
     if (!baseline) {
       console.log('1. Discovering capabilities and creating cryptographic baseline...');
@@ -337,9 +405,26 @@ program
 
     if (options.create) {
       const tools = await discoverWorkspaceTools(cwd);
-      const baseline = BaselineManager.createBaseline(tools, path.basename(cwd));
+      const currentBl = await FileBaselineStorage.loadLocalBaseline(cwd);
+      const nextVer = (currentBl?.version || 1) + 1;
+      const nextVerTag = `v1.0.${nextVer - 1}`;
+      const baseline = BaselineManager.createBaseline(tools, path.basename(cwd), 'developer@workspace.local', nextVer);
       await FileBaselineStorage.saveLocalBaseline(cwd, baseline);
-      console.log(`✓ Re-created baseline for ${tools.length} tools.\n`);
+      try {
+        const toolNames = Object.keys(baseline.tools || {});
+        await FileBaselineStorage.appendLocalHistory(cwd, {
+          version: nextVer,
+          versionTag: nextVerTag,
+          timestamp: baseline.createdAt,
+          actor: baseline.createdBy || 'developer',
+          action: 'BASELINE_CREATED',
+          title: `Baseline Re-created (${nextVerTag})`,
+          toolCount: baseline.toolCount || toolNames.length,
+          toolsAffected: toolNames,
+          baselineHash: baseline.baselineId
+        });
+      } catch {}
+      console.log(`✓ Re-created baseline for ${tools.length} tools (${nextVerTag}).\n`);
       process.exit(0);
     }
 
@@ -357,6 +442,134 @@ program
       console.log(`  - ${entry.name.padEnd(24)} [${entry.fingerprint.substring(0, 16)}...]`);
     }
     console.log('');
+  });
+
+// 4b. COMMAND: version
+program
+  .command('version')
+  .description('Display ToolGuard engine and workspace baseline version details')
+  .option('--json', 'Output version details as JSON', false)
+  .action(async (options) => {
+    const cwd = process.cwd();
+    const baseline = await FileBaselineStorage.loadLocalBaseline(cwd);
+    const cliVersion = '1.0.0';
+
+    if (options.json) {
+      console.log(JSON.stringify({
+        cliVersion,
+        baselineVersion: baseline ? `v1.0.${Math.max(0, (baseline.version || 1) - 1)}` : null,
+        baselineNumber: baseline?.version || null,
+        baselineId: baseline?.baselineId || null,
+        workspace: path.basename(cwd),
+        workspacePath: cwd,
+        algorithm: baseline?.algorithm || 'sha256',
+        toolCount: baseline?.toolCount || 0,
+        createdAt: baseline?.createdAt || null,
+        protected: baseline ? true : false,
+      }, null, 2));
+      process.exit(0);
+    }
+
+    console.log('\n🛡️  ToolGuard Version Information');
+    console.log('──────────────────────────────────────');
+    console.log(`  Engine / CLI Version:  v${cliVersion}`);
+    console.log(`  Workspace Directory:   ${cwd}`);
+
+    if (!baseline) {
+      console.log('  Baseline Version:      None (uninitialized)');
+      console.log('  Protection State:      UNPROTECTED');
+      console.log('\n  Tip: Run `toolguard init` to create a zero-trust baseline.\n');
+      process.exit(0);
+    }
+
+    const baselineTag = `v1.0.${Math.max(0, (baseline.version || 1) - 1)}`;
+    const tools = await discoverWorkspaceTools(cwd);
+    const scanResult = BaselineManager.compare(tools, baseline);
+    const isProtected = scanResult.driftCount === 0;
+
+    console.log(`  Baseline Version:      ${baselineTag} (Revision #${baseline.version || 1})`);
+    console.log(`  Baseline Hash / ID:    ${baseline.baselineId}`);
+    console.log(`  Cryptographic Engine:  ${baseline.algorithm.toUpperCase()}`);
+    console.log(`  Monitored Tools:       ${baseline.toolCount} tools registered`);
+    console.log(`  Baseline Created:      ${new Date(baseline.createdAt).toLocaleString()}`);
+    console.log(`  Protection State:      ${isProtected ? '● PROTECTED (In sync)' : `⚠ TRUST DRIFT (${scanResult.driftCount} tool(s) modified)`}`);
+    console.log('──────────────────────────────────────\n');
+    process.exit(0);
+  });
+
+// 4c. COMMAND: history
+program
+  .command('history')
+  .description('Display version history and capability changelog for the workspace')
+  .option('-n, --limit <number>', 'Number of history records to display', '10')
+  .option('--json', 'Output changelog history as JSON', false)
+  .action(async (options) => {
+    const cwd = process.cwd();
+    const history = await FileBaselineStorage.loadLocalHistory(cwd);
+
+    if (options.json) {
+      console.log(JSON.stringify(history, null, 2));
+      process.exit(0);
+    }
+
+    console.log('\n🛡️  ToolGuard Version History & Capability Changelog');
+    console.log('════════════════════════════════════════════════════════════');
+
+    if (!history || history.length === 0) {
+      console.log('\n  No version history found in current workspace.');
+      console.log('  Run `toolguard init` to establish the initial baseline.\n');
+      console.log('════════════════════════════════════════════════════════════\n');
+      process.exit(0);
+    }
+
+    const limit = parseInt(options.limit, 10) || 10;
+    const records = history.slice(0, limit);
+
+    records.forEach((record, idx) => {
+      const isLatest = idx === 0;
+      const formattedDate = new Date(record.timestamp).toLocaleString();
+      console.log(`\n  Version:        ${record.versionTag || `v1.0.${Math.max(0, record.version - 1)}`} ${isLatest ? '★ (Active / Latest)' : ''}`);
+      console.log(`  Timestamp:      ${formattedDate}`);
+      console.log(`  Event:          ${record.action || 'UPDATE'}`);
+      console.log(`  Actor:          ${record.actor || 'developer'}`);
+      console.log(`  Summary:        ${record.title || 'Capability update'}`);
+      console.log(`  Tools Count:    ${record.toolCount} monitored`);
+
+      if (record.baselineHash) {
+        console.log(`  Baseline Hash:  ${record.baselineHash}`);
+      }
+
+      if (record.toolsAffected && record.toolsAffected.length > 0) {
+        console.log(`  Tools Affected: ${record.toolsAffected.join(', ')}`);
+      }
+
+      if (record.changes && record.changes.length > 0) {
+        console.log('  Changelog:');
+        for (const ch of record.changes) {
+          const typeBadge = ch.changeType === 'added' ? '[+ADD]' : ch.changeType === 'removed' ? '[-DEL]' : '[~MOD]';
+          console.log(`    ${typeBadge} ${ch.toolName}`);
+          if (ch.summary) {
+            console.log(`          ${ch.summary}`);
+          }
+          if (ch.before !== undefined || ch.after !== undefined) {
+            console.log(`          Before: ${JSON.stringify(ch.before)}`);
+            console.log(`          After:  ${JSON.stringify(ch.after)}`);
+          }
+        }
+      }
+
+      if (idx < records.length - 1) {
+        console.log('\n  ────────────────────────────────────────────────────────────');
+      }
+    });
+
+    console.log('\n════════════════════════════════════════════════════════════');
+    if (history.length > limit) {
+      console.log(`  Showing ${limit} of ${history.length} versions. Use --limit <n> to view more.\n`);
+    } else {
+      console.log(`  Total Versions Logged: ${history.length}\n`);
+    }
+    process.exit(0);
   });
 
 // 5. COMMAND: explain
@@ -435,44 +648,113 @@ program
   });
 
 // Helper: Open Web Dashboard with live workspace state
-async function openDashboard(cwd: string) {
+async function openDashboard(
+  cwd: string,
+  subPath?: string,
+  preferLocal: boolean = true,
+  port: number = 3154,
+  targetEnv: 'browser' | 'ide' = 'browser'
+) {
   const baseUrl = process.env.TOOLGUARD_DASHBOARD_URL || 'https://toolguard-app.vercel.app';
-  let targetUrl = `${baseUrl}/dashboard`;
+  let targetPath = subPath || 'dashboard';
+  let targetUrl = `${baseUrl}/${targetPath}`;
+  let localUrl = `http://127.0.0.1:${port}/${targetPath}`;
+
+  try {
+    const http = await import('http');
+    const req = http.request(`http://127.0.0.1:${port}/api/workspace`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 600
+    });
+    req.on('error', () => {});
+    req.write(JSON.stringify({ cwd }));
+    req.end();
+  } catch {}
 
   try {
     const baseline = await FileBaselineStorage.loadLocalBaseline(cwd);
     if (baseline) {
       const tools = await discoverWorkspaceTools(cwd);
-      const payload = {
-        name: baseline.projectId || path.basename(cwd),
-        baseline,
-        tools
+      const scanResult = BaselineManager.compare(tools, baseline);
+      const hasDrift = scanResult.driftCount > 0;
+      if (!subPath) {
+        targetPath = hasDrift ? 'drift' : 'dashboard';
+      }
+
+      const driftedTools = scanResult.tools.filter(t => t.driftDetected);
+      const safeToolNames = scanResult.tools.filter(t => !t.driftDetected).map(t => t.name);
+
+      const compactPayload = {
+        v: 2,
+        projectId: baseline.projectId || path.basename(cwd),
+        workspacePath: cwd,
+        baselineId: baseline.baselineId,
+        totalTools: scanResult.totalTools,
+        driftCount: scanResult.driftCount,
+        safeTools: safeToolNames.slice(0, 30),
+        safeCount: safeToolNames.length,
+        drifts: driftedTools.map(t => {
+          const liveTool = tools.find(tool => (tool.id && tool.id === t.toolId) || tool.name === t.name);
+          const blEntry = baseline.tools[t.toolId] || Object.values(baseline.tools).find(e => e.name === t.name);
+          return {
+            toolId: t.toolId,
+            name: t.name,
+            status: t.status,
+            severity: t.status === 'HIGH RISK' ? 'high' : 'medium',
+            changes: t.changes,
+            current: liveTool || { name: t.name },
+            baseline: blEntry?.normalizedDefinition || null,
+            fingerprint: blEntry?.fingerprint || null
+          };
+        })
       };
-      const jsonStr = JSON.stringify(payload);
+
+      const jsonStr = JSON.stringify(compactPayload);
       const compressed = zlib.gzipSync(Buffer.from(jsonStr, 'utf8'));
       const encoded = compressed.toString('base64url');
-      const candidateUrl = `${baseUrl}/dashboard#sync=${encoded}`;
-      if (candidateUrl.length < 7500) {
-        targetUrl = candidateUrl;
-        console.log(`🛡 Synced ${tools.length} workspace tool(s) and baseline to browser session.`);
-      }
+      targetUrl = `${baseUrl}/${targetPath}#sync=${encoded}`;
+      localUrl = `http://127.0.0.1:${port}/${targetPath}#sync=${encoded}`;
+      console.log(`🛡 Synced ${scanResult.totalTools} workspace tool(s) (${scanResult.driftCount} drift) to local bridge.`);
     }
   } catch (e: any) {
     // Fallback gracefully
   }
 
-  console.log(`🔗 Dashboard: ${targetUrl}`);
-  console.log(`Opening ToolGuard Dashboard in browser...`);
+  const openUrl = preferLocal ? localUrl : targetUrl;
+  console.log(`\n🔗 Cloud Web Dashboard: ${targetUrl}`);
+  console.log(`🏠 Local Web Dashboard: ${localUrl}`);
+
+  if (targetEnv === 'ide') {
+    console.log(`💻 Opening ToolGuard Dashboard inside IDE (VS Code)...`);
+    const ideUri = `vscode://toolguard.toolguard-vscode/dashboard?mode=ide&target=${encodeURIComponent(openUrl)}`;
+    const platform = process.platform;
+    const cmd = platform === 'win32'
+      ? `start "" "${ideUri}"`
+      : platform === 'darwin'
+      ? `open "${ideUri}"`
+      : `xdg-open "${ideUri}"`;
+    exec(cmd, (err) => {
+      if (err) {
+        console.log(`💡 Could not trigger VS Code URI handler. Opening in local browser: ${openUrl}`);
+        const fallbackCmd = platform === 'win32' ? `start "" "${openUrl}"` : platform === 'darwin' ? `open "${openUrl}"` : `xdg-open "${openUrl}"`;
+        exec(fallbackCmd, () => {});
+      }
+    });
+    return;
+  }
+
+  console.log(`🌐 Opening ToolGuard Dashboard in browser (${preferLocal ? 'Local Server' : 'Cloud UI'})...`);
   const platform = process.platform;
   const cmd = platform === 'win32'
-    ? `start "" "${targetUrl}"`
+    ? `start "" "${openUrl}"`
     : platform === 'darwin'
-    ? `open "${targetUrl}"`
-    : `xdg-open "${targetUrl}"`;
+    ? `open "${openUrl}"`
+    : `xdg-open "${openUrl}"`;
 
   exec(cmd, (err) => {
     if (err) {
-      console.log(`Please open ${targetUrl} in your browser.`);
+      console.log(`Please open ${openUrl} in your browser.`);
     }
   });
 }
@@ -480,9 +762,29 @@ async function openDashboard(cwd: string) {
 // 8. COMMAND: dashboard
 program
   .command('dashboard')
-  .description('Open the ToolGuard Web Dashboard in browser with live workspace sync')
-  .action(async () => {
-    await openDashboard(process.cwd());
+  .description('Open the ToolGuard Web Dashboard in browser or IDE with live workspace sync')
+  .option('-l, --local', 'Open local offline dashboard server directly', true)
+  .option('--ide', 'Open dashboard inside VS Code internal IDE tab', false)
+  .option('-b, --browser', 'Open dashboard in external web browser', false)
+  .option('-p, --port <port>', 'Port for real-time local bridge', '3154')
+  .action(async (options) => {
+    const cwd = process.cwd();
+    const port = parseInt(options.port || '3154', 10);
+    const bridge = await startBridgeServer({
+      cwd,
+      port,
+      onLog: (msg) => console.log(msg)
+    });
+    if (!bridge.isAlreadyRunning) {
+      console.log(`✓ Real-Time Bridge active at http://${bridge.host}:${bridge.port}`);
+    } else {
+      console.log(`✓ Real-Time Bridge already connected on port ${bridge.port}`);
+    }
+    const targetEnv = options.ide ? 'ide' : 'browser';
+    await openDashboard(cwd, undefined, Boolean(options.local), port, targetEnv);
+    console.log(`\n📡 Live Bridge is running. Web Dashboard updates in real-time.`);
+    console.log(`Press Ctrl+C to close bridge.\n`);
+    await new Promise(() => {});
   });
 
 // 9. COMMAND: disconnect / reset
@@ -603,7 +905,9 @@ program
 program
   .command('threat-test')
   .description('Simulate an unauthorized capability drift (adds admin & external network permissions)')
-  .action(async () => {
+  .option('-w, --web', 'Directly open Web Dashboard in browser without prompting')
+  .option('--no-web', 'Do not open Web Dashboard in browser')
+  .action(async (options) => {
     const cwd = process.cwd();
     const testFile = path.join(cwd, '.toolguard', 'tools', 'threat-simulation.json');
     const maliciousTool = {
@@ -621,22 +925,136 @@ program
     await fs.mkdir(path.dirname(testFile), { recursive: true });
     await fs.writeFile(testFile, JSON.stringify([maliciousTool], null, 2), 'utf8');
     console.log('\n⚠ Threat injected at .toolguard/tools/threat-simulation.json');
-    console.log('Run `toolguard scan` or check VS Code / Web Dashboard to see the real-time alert!\n');
+    console.log('Run `toolguard scan` or `toolguard dashboard` to inspect the visual diff alert!\n');
+
+    try {
+      const baseline = await FileBaselineStorage.loadLocalBaseline(cwd);
+      if (baseline) {
+        const tools = await discoverWorkspaceTools(cwd);
+        const scanResult = BaselineManager.compare(tools, baseline);
+        const driftedTools = scanResult.tools.filter(t => t.driftDetected);
+        const safeToolNames = scanResult.tools.filter(t => !t.driftDetected).map(t => t.name);
+
+        const compactPayload = {
+          v: 2,
+          projectId: baseline.projectId || path.basename(cwd),
+          workspacePath: cwd,
+          baselineId: baseline.baselineId,
+          totalTools: scanResult.totalTools,
+          driftCount: scanResult.driftCount,
+          safeTools: safeToolNames.slice(0, 30),
+          safeCount: safeToolNames.length,
+          drifts: driftedTools.map(t => {
+            const liveTool = tools.find(tool => (tool.id && tool.id === t.toolId) || tool.name === t.name);
+            const blEntry = baseline.tools[t.toolId] || Object.values(baseline.tools).find(e => e.name === t.name);
+            return {
+              toolId: t.toolId,
+              name: t.name,
+              status: t.status,
+              severity: t.status === 'HIGH RISK' ? 'high' : 'medium',
+              changes: t.changes,
+              current: liveTool || { name: t.name },
+              baseline: blEntry?.normalizedDefinition || null,
+              fingerprint: blEntry?.fingerprint || null
+            };
+          })
+        };
+
+        const jsonStr = JSON.stringify(compactPayload);
+        const compressed = zlib.gzipSync(Buffer.from(jsonStr, 'utf8'));
+        const encoded = compressed.toString('base64url');
+        console.log(`🔗 Direct Visual Diff: https://toolguard-app.vercel.app/drift#sync=${encoded}\n`);
+      }
+    } catch {}
+
     console.log('To clean up afterwards: run `toolguard restore-test`\n');
+    console.log('💡 To inspect: Click "Open Dashboard" in your IDE or run `toolguard dashboard`.\n');
+    if (options.web) {
+      await openDashboard(cwd, 'drift');
+    }
   });
 
 // 12. COMMAND: restore-test
 program
   .command('restore-test')
   .description('Remove test threat simulation and restore clean baseline state')
-  .action(async () => {
+  .option('--ide', 'Open dashboard inside VS Code internal IDE tab')
+  .option('--browser', 'Open dashboard in local web browser')
+  .option('--no-prompt', 'Do not prompt to open dashboard')
+  .action(async (options) => {
     const cwd = process.cwd();
     const testFile = path.join(cwd, '.toolguard', 'tools', 'threat-simulation.json');
     try {
       await fs.unlink(testFile);
-      console.log('\n✓ Removed threat simulation file. Workspace restored to trusted baseline.\n');
+      console.log('\n✓ Removed threat simulation file. Workspace restored to trusted baseline (All tools SAFE).\n');
     } catch {
       console.log('\n✓ No active threat simulation file found.\n');
+    }
+
+    // Also purge any lingering threat entries from local baseline.json
+    try {
+      const currentBl = await FileBaselineStorage.loadLocalBaseline(cwd);
+      if (currentBl && currentBl.tools) {
+        let blChanged = false;
+        const cleanToolsMap: Record<string, any> = {};
+        for (const [k, v] of Object.entries(currentBl.tools)) {
+          if (k.toLowerCase().includes('threat') || k.toLowerCase().includes('simulation') ||
+              v.name.toLowerCase().includes('threat') || v.name.toLowerCase().includes('simulation')) {
+            blChanged = true;
+          } else {
+            cleanToolsMap[k] = v;
+          }
+        }
+        if (blChanged) {
+          currentBl.tools = cleanToolsMap;
+          currentBl.toolCount = Object.keys(cleanToolsMap).length;
+          await FileBaselineStorage.saveLocalBaseline(cwd, currentBl);
+        }
+      }
+    } catch {}
+
+    // Notify local bridge if running
+    try {
+      await fetch('http://127.0.0.1:3154/api/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cwd, workspacePath: cwd })
+      });
+    } catch {}
+
+    if (options.ide) {
+      await openDashboard(cwd, 'dashboard', true, 3154, 'ide');
+      return;
+    }
+    if (options.browser) {
+      await openDashboard(cwd, 'dashboard', true, 3154, 'browser');
+      return;
+    }
+
+    if (process.stdout.isTTY && options.prompt !== false) {
+      const readline = await import('readline');
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+      await new Promise<void>((resolve) => {
+        rl.question(
+          'Where would you like to view the dashboard?\n  [1] Open in IDE (VS Code internal tab)\n  [2] Open in Browser (Local http://127.0.0.1:3154)\n  [3] Skip / Done [default]\nSelect [1-3]: ',
+          async (answer) => {
+            rl.close();
+            const ans = answer.trim();
+            if (ans === '1') {
+              await openDashboard(cwd, 'dashboard', true, 3154, 'ide');
+            } else if (ans === '2') {
+              await openDashboard(cwd, 'dashboard', true, 3154, 'browser');
+            } else {
+              console.log('✓ Clean state verified. To inspect later, run `toolguard dashboard --ide` or `toolguard dashboard --local`.\n');
+            }
+            resolve();
+          }
+        );
+      });
+    } else {
+      console.log('💡 Quick options to view dashboard locally:');
+      console.log('   • In IDE:     toolguard dashboard --ide');
+      console.log('   • In Browser: toolguard dashboard --local\n');
     }
   });
 
@@ -697,6 +1115,31 @@ program
         console.log('No running ToolGuard daemon found.\n');
       }
     }
+  });
+
+// 13.5. COMMAND: serve
+program
+  .command('serve [port]')
+  .alias('bridge')
+  .description('Start the local real-time HTTP bridge for IDE and Web Dashboard live sync')
+  .action(async (portParam) => {
+    const cwd = process.cwd();
+    const port = portParam ? parseInt(portParam, 10) : 3154;
+    console.log(CLI_BANNER);
+    console.log(`Starting ToolGuard Real-Time Bridge on port ${port}...`);
+    const bridge = await startBridgeServer({
+      cwd,
+      port,
+      onLog: (msg) => console.log(msg),
+      onStateChange: () => {
+        console.log('\n[Web Sync] State updated via Web UI — cryptographic baseline synced in real-time.');
+      }
+    });
+    console.log(`\n✓ Bridge active at http://${bridge.host}:${bridge.port}`);
+    console.log(`✓ Real-time status API: http://${bridge.host}:${bridge.port}/api/status`);
+    console.log(`✓ Web Console connects automatically at https://toolguard-app.vercel.app`);
+    console.log(`Press Ctrl+C to stop.\n`);
+    await new Promise(() => {});
   });
 
 // 14. COMMAND: remove / delete / rm

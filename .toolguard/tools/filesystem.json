@@ -1,6 +1,8 @@
 {
+  "id": "filesystem",
   "name": "filesystem",
   "description": "Local workspace filesystem reader",
+  "version": "1.0.0",
   "permissions": [
     "read"
   ],

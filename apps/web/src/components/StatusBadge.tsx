@@ -1,8 +1,5 @@
 import React from 'react';
 import { Chip, Box, useTheme } from '@mui/material';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { TrustStatus, RiskSeverity } from '@toolguard/shared';
 
 interface StatusBadgeProps {
@@ -16,7 +13,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'small'
   const normalized = status.toUpperCase();
 
   if (normalized === 'SAFE' || normalized === 'LOW') {
-    const color = isDark ? '#00D4AA' : '#008B72';
+    const color = isDark ? '#3ECF8E' : '#00C475';
     return (
       <Chip
         icon={
@@ -36,12 +33,12 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'small'
         label={normalized === 'LOW' ? 'LOW RISK' : 'SAFE (VERIFIED)'}
         size={size}
         sx={{
-          backgroundColor: isDark ? 'rgba(0, 212, 170, 0.1)' : 'rgba(0, 139, 114, 0.08)',
+          backgroundColor: isDark ? 'rgba(62, 207, 142, 0.12)' : 'rgba(0, 196, 117, 0.08)',
           color: color,
-          border: `1px solid ${isDark ? 'rgba(0, 212, 170, 0.3)' : 'rgba(0, 139, 114, 0.28)'}`,
-          fontWeight: 750,
+          border: `1px solid ${isDark ? 'rgba(62, 207, 142, 0.3)' : 'rgba(0, 196, 117, 0.25)'}`,
+          fontWeight: 650,
           letterSpacing: '0.03em',
-          fontSize: '0.67rem',
+          fontSize: '0.68rem',
           height: 22,
           borderRadius: '6px',
         }}
@@ -50,7 +47,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'small'
   }
 
   if (normalized === 'REVIEW' || normalized === 'MEDIUM') {
-    const color = isDark ? '#FFB340' : '#CC8A1E';
+    const color = isDark ? '#F5A623' : '#D97706';
     return (
       <Chip
         icon={
@@ -70,12 +67,12 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'small'
         label={normalized === 'MEDIUM' ? 'REVIEW (MED)' : 'NEEDS REVIEW'}
         size={size}
         sx={{
-          backgroundColor: isDark ? 'rgba(255, 179, 64, 0.1)' : 'rgba(204, 138, 30, 0.08)',
+          backgroundColor: isDark ? 'rgba(245, 166, 35, 0.12)' : 'rgba(217, 119, 6, 0.08)',
           color: color,
-          border: `1px solid ${isDark ? 'rgba(255, 179, 64, 0.3)' : 'rgba(204, 138, 30, 0.28)'}`,
-          fontWeight: 750,
+          border: `1px solid ${isDark ? 'rgba(245, 166, 35, 0.3)' : 'rgba(217, 119, 6, 0.25)'}`,
+          fontWeight: 650,
           letterSpacing: '0.03em',
-          fontSize: '0.67rem',
+          fontSize: '0.68rem',
           height: 22,
           borderRadius: '6px',
         }}
@@ -84,7 +81,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'small'
   }
 
   // HIGH RISK / DRIFT DETECTED
-  const color = isDark ? '#FF4D6A' : '#D63051';
+  const color = isDark ? '#FA5252' : '#DC2626';
   return (
     <Chip
       icon={
@@ -105,12 +102,12 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'small'
       label="HIGH RISK (DRIFT)"
       size={size}
       sx={{
-        backgroundColor: isDark ? 'rgba(255, 77, 106, 0.12)' : 'rgba(214, 48, 81, 0.08)',
+        backgroundColor: isDark ? 'rgba(250, 82, 82, 0.12)' : 'rgba(220, 38, 38, 0.08)',
         color: color,
-        border: `1px solid ${isDark ? 'rgba(255, 77, 106, 0.35)' : 'rgba(214, 48, 81, 0.3)'}`,
-        fontWeight: 800,
+        border: `1px solid ${isDark ? 'rgba(250, 82, 82, 0.35)' : 'rgba(220, 38, 38, 0.25)'}`,
+        fontWeight: 700,
         letterSpacing: '0.03em',
-        fontSize: '0.67rem',
+        fontSize: '0.68rem',
         height: 22,
         borderRadius: '6px',
       }}

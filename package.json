@@ -12,6 +12,8 @@
     "lint": "pnpm -r --parallel run lint",
     "typecheck": "pnpm -r --parallel run typecheck",
     "cli": "pnpm --filter @toolguard/cli dev",
+    "dev": "pnpm --filter @toolguard/web dev",
+    "dashboard": "node packages/cli/dist/cli.cjs dashboard",
     "web:dev": "pnpm --filter @toolguard/web dev",
     "web:build": "pnpm --filter @toolguard/web build"
   },

@@ -1,0 +1,31 @@
+[
+  {
+    "version": 2,
+    "versionTag": "v1.0.1",
+    "timestamp": "2026-10-03T00:05:33.995Z",
+    "actor": "developer@workspace.local",
+    "action": "BASELINE_CREATED",
+    "title": "Baseline Re-created (v1.0.1)",
+    "toolCount": 17,
+    "toolsAffected": [
+      "filesystem",
+      "github",
+      "project-files",
+      "terminal",
+      "npm-build",
+      "npm-bundle:cli",
+      "npm-build:all",
+      "npm-test",
+      "npm-test:watch",
+      "npm-lint",
+      "npm-typecheck",
+      "npm-cli",
+      "npm-dev",
+      "npm-dashboard",
+      "npm-web:dev",
+      "npm-web:build",
+      "ci-ci-yml"
+    ],
+    "baselineHash": "bl-1790985933988-zkqhp7"
+  }
+]

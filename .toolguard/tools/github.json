@@ -1,6 +1,8 @@
 {
+  "id": "github",
   "name": "github",
   "description": "GitHub repository integration",
+  "version": "1.0.0",
   "permissions": [
     "read"
   ],

@@ -39,3 +39,7 @@ Thumbs.db
 .toolguard/*.pid
 .toolguard/daemon.log
 .toolguard/daemon.pid
+
+# Embedded web builds
+apps/vscode-extension/web/
+packages/cli/dist/web/

@@ -46,29 +46,27 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const bgContainer = isDark ? '#080B14' : '#ffffff';
-  const bgHeader = isDark ? '#0D1220' : '#F7F8FC';
-  const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(210, 218, 235, 0.85)';
-  const textColor = isDark ? '#E2E8F0' : '#0D1117';
-  const lineNumberColor = isDark ? '#475569' : '#94a3b8';
+  const bgContainer = isDark ? '#141414' : '#FFFFFF';
+  const bgHeader = isDark ? '#171717' : '#F9FAFB';
+  const borderColor = isDark ? '#2E2E2E' : '#E5E7EB';
+  const textColor = isDark ? '#EDEDED' : '#111827';
+  const lineNumberColor = isDark ? '#555555' : '#9CA3AF';
 
-  const addBg = isDark ? 'rgba(0, 212, 170, 0.12)' : 'rgba(0, 139, 114, 0.08)';
-  const addColor = isDark ? '#00D4AA' : '#008B72';
-  const remBg = isDark ? 'rgba(255, 77, 106, 0.14)' : 'rgba(214, 48, 81, 0.08)';
-  const remColor = isDark ? '#FF4D6A' : '#D63051';
-  const accentPrimary = isDark ? '#00D4AA' : '#008B72';
+  const addBg = isDark ? 'rgba(62, 207, 142, 0.12)' : 'rgba(0, 196, 117, 0.08)';
+  const addColor = isDark ? '#3ECF8E' : '#00C475';
+  const remBg = isDark ? 'rgba(250, 82, 82, 0.12)' : 'rgba(220, 38, 38, 0.08)';
+  const remColor = isDark ? '#FA5252' : '#DC2626';
+  const accentPrimary = isDark ? '#3ECF8E' : '#00C475';
 
   return (
     <Paper
       variant="outlined"
       sx={{
-        borderRadius: '12px',
+        borderRadius: '8px',
         overflow: 'hidden',
         borderColor,
         backgroundColor: bgContainer,
-        boxShadow: isDark
-          ? '0 12px 32px rgba(0,0,0,0.5)'
-          : '0 4px 20px -4px rgba(13, 17, 23, 0.06)',
+        boxShadow: 'none',
       }}
     >
       {/* Diff Header */}
@@ -126,8 +124,8 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
         <Box sx={{ display: 'flex', width: '100%', overflowX: 'auto' }}>
           {/* Baseline column */}
           <Box sx={{ flex: 1, borderRight: `1px solid ${borderColor}` }}>
-            <Box sx={{ px: 2, py: 0.75, backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F0F2F8', borderBottom: `1px solid ${borderColor}` }}>
-              <Typography variant="caption" sx={{ color: isDark ? '#94A3B8' : '#475569', fontWeight: 750, letterSpacing: '0.04em', fontSize: '0.7rem' }}>
+            <Box sx={{ px: 2, py: 0.75, backgroundColor: isDark ? '#171717' : '#F9FAFB', borderBottom: `1px solid ${borderColor}` }}>
+              <Typography variant="caption" sx={{ color: isDark ? '#9E9E9E' : '#6B7280', fontWeight: 650, letterSpacing: '0.04em', fontSize: '0.7rem' }}>
                 {baselineTitle}
               </Typography>
             </Box>
@@ -171,8 +169,8 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
 
           {/* Current column */}
           <Box sx={{ flex: 1 }}>
-            <Box sx={{ px: 2, py: 0.75, backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F0F2F8', borderBottom: `1px solid ${borderColor}` }}>
-              <Typography variant="caption" sx={{ color: isDark ? '#94A3B8' : '#475569', fontWeight: 750, letterSpacing: '0.04em', fontSize: '0.7rem' }}>
+            <Box sx={{ px: 2, py: 0.75, backgroundColor: isDark ? '#171717' : '#F9FAFB', borderBottom: `1px solid ${borderColor}` }}>
+              <Typography variant="caption" sx={{ color: isDark ? '#9E9E9E' : '#6B7280', fontWeight: 650, letterSpacing: '0.04em', fontSize: '0.7rem' }}>
                 {currentTitle}
               </Typography>
             </Box>

@@ -7,11 +7,11 @@ import { AppRoutes } from './routes/AppRoutes';
 export const App: React.FC = () => {
   return (
     <ThemeModeProvider>
-      <DemoDataProvider>
-        <BrowserRouter>
+      <BrowserRouter>
+        <DemoDataProvider>
           <AppRoutes />
-        </BrowserRouter>
-      </DemoDataProvider>
+        </DemoDataProvider>
+      </BrowserRouter>
     </ThemeModeProvider>
   );
 };

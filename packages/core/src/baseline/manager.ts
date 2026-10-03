@@ -72,7 +72,8 @@ export class BaselineManager {
 
     // Check all tools in baseline
     for (const [toolId, baselineEntry] of Object.entries(baseline.tools)) {
-      const currentTool = currentToolsMap.get(toolId);
+      const currentTool = currentToolsMap.get(toolId) ||
+        tools.find(t => (t.id && t.id === toolId) || t.name === baselineEntry.name || (t.id && t.id === baselineEntry.toolId));
 
       if (!currentTool) {
         // Tool in baseline was removed
@@ -144,8 +145,12 @@ export class BaselineManager {
     }
 
     // Check for newly introduced tools not in baseline
-    for (const [id, currentTool] of currentToolsMap.entries()) {
-      if (!baseline.tools[id]) {
+    for (const currentTool of tools) {
+      const id = currentTool.id || currentTool.name;
+      const matchedInBaseline = baseline.tools[id] ||
+        Object.values(baseline.tools).find(entry => entry.toolId === id || entry.name === currentTool.name || (currentTool.id && entry.toolId === currentTool.id));
+
+      if (!matchedInBaseline) {
         driftCount++;
         const sanitized = redactSensitiveData(currentTool);
         const normalized = normalizeToolDefinition(sanitized);
@@ -159,10 +164,50 @@ export class BaselineManager {
           })
         ];
 
+        // Evaluate permissions of the new tool
+        if (currentTool.permissions && currentTool.permissions.length > 0) {
+          changes.push(evaluateChangeRisk({
+            path: 'permissions',
+            type: 'added',
+            before: [],
+            after: currentTool.permissions
+          }));
+        }
+
+        // Evaluate execution command of the new tool
+        if (currentTool.execution?.command) {
+          changes.push(evaluateChangeRisk({
+            path: 'execution.command',
+            type: 'added',
+            before: undefined,
+            after: currentTool.execution.command
+          }));
+        }
+
+        // Evaluate endpoint of the new tool
+        if (currentTool.endpoint && currentTool.endpoint !== 'local') {
+          changes.push(evaluateChangeRisk({
+            path: 'endpoint',
+            type: 'added',
+            before: 'local',
+            after: currentTool.endpoint
+          }));
+        }
+
+        const severity = determineOverallSeverity(changes);
+        const trustStatus: TrustStatus = severity === 'high' ? 'HIGH RISK' : 'REVIEW';
+        if (severity === 'high') {
+          highestSeverity = 'high';
+        } else if (severity === 'medium' && highestSeverity !== 'high') {
+          highestSeverity = 'medium';
+        } else if (highestSeverity === 'none') {
+          highestSeverity = 'low';
+        }
+
         toolStatuses.push({
           toolId: id,
           name: currentTool.name,
-          status: 'REVIEW',
+          status: trustStatus,
           driftDetected: true,
           fingerprint: fp.hash,
           changes,
